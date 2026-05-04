@@ -350,7 +350,7 @@ cycleBondThreshold: 0.36
 - `MetricsPanel`에 coarse field 관측 카드 추가
 
 
-## v8.5.4 성능 패치 요약
+## v8.5.6 성능 패치 요약
 
 - `SimulationConfig.performanceMode` 추가
 - `renderSnapshotFps`, `heavyMetricInterval`, `particleDetectionInterval`, `cycleDetectionInterval`, `coarseFieldInterval` 추가

@@ -117,10 +117,10 @@ export default function App() {
     <div className="app-shell">
       <header className="hero">
         <div>
-          <p className="eyebrow">Taegeukja Cosmology Simulator v8.5.4.2</p>
+          <p className="eyebrow">Taegeukja Cosmology Simulator v8.5.6.2</p>
           <h1>태극자 1000~3000 균일 분산장 · 실측 시간 보정 · 동적 pulse/cycle-bond 시뮬레이터</h1>
           <p>
-            화면 노드 1개를 실제 태극자 다수의 대표 셀로 해석합니다. v8.5.1은 대표 로드 100개를 소립자 1개 스케일로 재정립해 다수 입자 상호작용을 보며, 태극자 1 변화 = 1 플랑크 틱이라는 시간 정의를 시뮬레이터에 연결합니다. 브라우저가 실제 처리하는 SPS를 측정해 timeCompressionFactor를 자동 보정하고, v8.5.4는 snapshot 갱신 빈도, edge/node 렌더링 예산, 무거운 통계 계산 간격을 조절해 일반 PC에서도 step이 막히지 않도록 성능 병목을 줄입니다.
+            화면 노드 1개를 실제 태극자 다수의 대표 셀로 해석합니다. v8.5.1은 대표 로드 100개를 소립자 1개 스케일로 재정립해 다수 입자 상호작용을 보며, 태극자 1 변화 = 1 플랑크 틱이라는 시간 정의를 시뮬레이터에 연결합니다. 브라우저가 실제 처리하는 SPS를 측정해 timeCompressionFactor를 자동 보정하고, v8.5.6은 snapshot 갱신 빈도, edge/node 렌더링 예산, 무거운 통계 계산 간격을 조절해 일반 PC에서도 step이 막히지 않도록 성능 병목을 줄입니다.
           </p>
         </div>
         <div className="hero-card">

@@ -47,7 +47,7 @@ export function Controls({ config, running, onChange, onReset, onToggle, onStep 
   const recommendedCompression = crossingTicks / Math.max(1, config.crossingVisualSeconds * effectiveSps);
   return (
     <aside className="panel controls">
-      <div className="panel-title">설정 · v8.5.4 성능 점검/coarse 사건장 엔진</div>
+      <div className="panel-title">설정 · v8.5.6 성능 점검/coarse 사건장 엔진</div>
       <div className="button-row">
         <button onClick={onToggle}>{running ? '일시정지' : '실행'}</button>
         <button onClick={onStep}>1스텝</button>
@@ -183,7 +183,7 @@ export function Controls({ config, running, onChange, onReset, onToggle, onStep 
       <Toggle label="입자 후보장 중심 표시" checked={config.showFieldParticlesOnly} onChange={(showFieldParticlesOnly) => onChange({ showFieldParticlesOnly })} hint="강한 입자 후보 주변 사건장만 강조하는 실험 옵션" />
       <p className="hint">v8.5.3은 미시 사건 전체 대신 격자형 사건장으로 pulse 밀도·연속성·루프 폐합률·입자 잠재장을 통계적으로 보존해 표현합니다.</p>
 
-      <div className="section-label">v8.5.4 PC 성능 점검/최적화</div>
+      <div className="section-label">v8.5.6 PC 성능 점검/최적화</div>
       <Toggle label="성능 모드 ON" checked={config.performanceMode} onChange={(performanceMode) => onChange({ performanceMode })} hint="무거운 통계와 렌더링을 일정 간격으로 분산" />
       <Slider label="snapshot 갱신 FPS" value={config.renderSnapshotFps} min={8} max={60} step={1} onChange={(renderSnapshotFps) => onChange({ renderSnapshotFps })} digits={0} />
       <Slider label="무거운 통계 계산 간격" value={config.heavyMetricInterval} min={1} max={12} step={1} onChange={(heavyMetricInterval) => onChange({ heavyMetricInterval })} digits={0} />

@@ -24,7 +24,7 @@ export function MetricsPanel({ snapshot }: { snapshot: SimulationSnapshot }) {
   const pm = m.performanceMetrics;
   return (
     <aside className="panel metrics">
-      <div className="panel-title">관측값 · v8.5.4 성능 병목/coarse 사건장</div>
+      <div className="panel-title">관측값 · v8.5.6 성능 병목/coarse 사건장</div>
       <div className="scale-card">
         <b>소립자 1개 목표 스케일</b>
         <code>N_real = (r / ℓ_TQ)³</code>
@@ -93,7 +93,7 @@ export function MetricsPanel({ snapshot }: { snapshot: SimulationSnapshot }) {
       <Bar label="화면 격자 점유율" value={m.fieldOccupancyRatio} />
       <Bar label="뭉침 지수" value={m.cohesionIndex} />
       <div className="force-decomp-card performance-card">
-        <b>v8.5.4 PC 성능 병목 점검</b>
+        <b>v8.5.6 PC 성능 병목 점검</b>
         <small>전체 step은 계속 돌리되, React snapshot 복사·Canvas edge 렌더링·무거운 통계 계산을 제한합니다.</small>
         <div className="decomp-summary">
           <span>snapshot <b>{pm.snapshotFps} fps</b></span>

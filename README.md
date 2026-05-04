@@ -32,13 +32,13 @@ npm run build
 ```bash
 git init
 git add .
-git commit -m "Initial commit: Taegeukja simulator v8.5.4"
+git commit -m "Initial commit: Taegeukja simulator v8.5.6"
 git branch -M main
 ```
 
 ---
 
-## v8.5.4 핵심: 어디에서 시간이 많이 걸렸나?
+## v8.5.6 핵심: 어디에서 시간이 많이 걸렸나?
 
 v8.5.3의 주요 병목은 다음이었습니다.
 
@@ -51,7 +51,7 @@ v8.5.3의 주요 병목은 다음이었습니다.
 6. coarseField가 step마다 비워져 smoothing 효과가 약해짐
 ```
 
-## v8.5.4 수정
+## v8.5.6 수정
 
 ```txt
 1. snapshot 갱신 FPS 제한: 기본 24fps

@@ -137,7 +137,7 @@ export interface SimulationConfig {
   coarseFieldIntensity: number;
   showFieldParticlesOnly: boolean;
 
-  /** v8.5.4 PC performance governor */
+  /** v8.5.6 PC performance governor */
   performanceMode: boolean;
   renderSnapshotFps: number;
   heavyMetricInterval: number;
