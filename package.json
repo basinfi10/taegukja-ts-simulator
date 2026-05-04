@@ -1,7 +1,7 @@
 {
-  "name": "taegukja-ts-simulator-v8-5-4-performance",
+  "name": "taegukja-ts-simulator-v8-5-6-performance",
   "private": true,
-  "version": "8.5.4",
+  "version": "8.5.6",
   "type": "module",
   "scripts": {
     "dev": "vite",
