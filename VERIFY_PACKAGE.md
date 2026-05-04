@@ -1,7 +1,7 @@
 # Verification
 
-package name: taegukja-ts-simulator-v8-5-4-performance
-package version: 8.5.4
+package name: taegukja-ts-simulator-v8-5-6-performance
+package version: 8.5.6
 git branch command executed: git branch -M main
 verified branch before packaging: main
 npm install: success

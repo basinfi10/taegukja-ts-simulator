@@ -1,4 +1,4 @@
-# Taegeukja Simulator v8.5.4 — Performance Governor + Coarse Event Field
+# Taegeukja Simulator v8.5.6 — Performance Governor + Coarse Event Field
 
 ## 버전 확인
 
