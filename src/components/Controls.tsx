@@ -5,8 +5,10 @@ type Props = {
   running: boolean;
   onChange: (patch: Partial<SimulationConfig>) => void;
   onReset: () => void;
-  onToggle: () => void;
+  onRun: () => void;
+  onPause: () => void;
   onStep: () => void;
+  onBurst: () => void;
 };
 
 function Slider({ label, value, min, max, step, onChange, suffix = '', digits = 2 }: { label: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void; suffix?: string; digits?: number }) {
@@ -41,18 +43,29 @@ function Toggle({ label, checked, onChange, hint }: { label: string; checked: bo
   );
 }
 
-export function Controls({ config, running, onChange, onReset, onToggle, onStep }: Props) {
+export function Controls({ config, running, onChange, onReset, onRun, onPause, onStep, onBurst }: Props) {
   const crossingTicks = (config.particleEffectiveRadiusM / 299_792_458) / Math.max(1e-99, config.planckTimeS);
   const effectiveSps = config.measuredStepsPerSecond > 0.5 ? config.measuredStepsPerSecond : config.visualStepsPerSecond;
   const recommendedCompression = crossingTicks / Math.max(1, config.crossingVisualSeconds * effectiveSps);
   return (
     <aside className="panel controls">
-      <div className="panel-title">설정 · v8.5.4 성능 점검/coarse 사건장 엔진</div>
+      <div className="panel-title">설정 · v8.5.8 실행 고정/진행 진단 엔진</div>
       <div className="button-row">
-        <button onClick={onToggle}>{running ? '일시정지' : '실행'}</button>
+        <button onClick={onRun} disabled={running}>실행 고정</button>
+        <button onClick={onPause} disabled={!running}>일시정지</button>
         <button onClick={onStep}>1스텝</button>
+        <button onClick={onBurst}>터보 300스텝</button>
         <button onClick={onReset}>재생성</button>
       </div>
+
+      <div className={running ? "run-status active" : "run-status paused"}>
+        {running ? '현재 실행 중입니다. 화면이 느리면 아래 시각 진행값을 먼저 올리세요.' : '현재 정지 상태입니다. 실행 버튼을 눌러야 진행됩니다.'}
+      </div>
+      <div className="section-label">빠른 시각 진행 조절</div>
+      <Slider label="시뮬레이션 속도 배율" value={config.simulationSpeedMultiplier} min={0.2} max={12} step={0.1} onChange={(simulationSpeedMultiplier) => onChange({ simulationSpeedMultiplier })} />
+      <Slider label="엔진 스텝/프레임" value={config.engineStepsPerFrame} min={1} max={16} step={1} onChange={(engineStepsPerFrame) => onChange({ engineStepsPerFrame })} digits={0} />
+      <Slider label="최대 catch-up 스텝" value={config.maxCatchUpSteps} min={1} max={32} step={1} onChange={(maxCatchUpSteps) => onChange({ maxCatchUpSteps })} digits={0} />
+      <p className="hint">시간 압축 K_t는 물리 시간 표시용입니다. 화면 움직임은 주로 시뮬레이션 속도 배율과 엔진 스텝/프레임으로 조절하세요.</p>
 
       <div className="section-label">실제 스케일 정의</div>
       <label className="select-row">목표 입자 에너지
@@ -195,9 +208,6 @@ export function Controls({ config, running, onChange, onReset, onToggle, onStep 
       <p className="hint">움직임이 적으면 snapshot FPS보다 measured SPS와 edge/node 렌더링 예산을 먼저 봐야 합니다. 기본값은 힘 벡터 표시를 끄고 edge 표시 수를 제한해 step 처리량을 우선 확보합니다.</p>
 
       <div className="section-label">v8.5.6 시각 흐름/렌더링 튜닝</div>
-      <Slider label="엔진 스텝/프레임" value={config.engineStepsPerFrame} min={1} max={12} step={1} onChange={(engineStepsPerFrame) => onChange({ engineStepsPerFrame })} digits={0} />
-      <Slider label="최대 catch-up 스텝" value={config.maxCatchUpSteps} min={1} max={24} step={1} onChange={(maxCatchUpSteps) => onChange({ maxCatchUpSteps })} digits={0} />
-      <Slider label="시뮬레이션 속도 배율" value={config.simulationSpeedMultiplier} min={0.2} max={8} step={0.1} onChange={(simulationSpeedMultiplier) => onChange({ simulationSpeedMultiplier })} />
       <Slider label="edge 투명도 배율" value={config.edgeAlphaScale} min={0.05} max={1.4} step={0.05} onChange={(edgeAlphaScale) => onChange({ edgeAlphaScale })} />
       <Slider label="mass-bond 표시 비율" value={config.massBondRenderRatio} min={0.02} max={1} step={0.02} onChange={(massBondRenderRatio) => onChange({ massBondRenderRatio })} />
       <Slider label="cycle-bond 표시 비율" value={config.cycleBondRenderRatio} min={0.05} max={1} step={0.05} onChange={(cycleBondRenderRatio) => onChange({ cycleBondRenderRatio })} />

@@ -381,3 +381,39 @@ cycleBondThreshold: 0.36
 
 - types/defaults
   - v8.5.6 설정값과 PerformanceMetrics 확장
+
+
+## v8.5.7 코드 변경 요약
+
+- App.tsx
+  - running 기본값을 true로 변경
+  - 실행/정지 상태 배지 추가
+  - JSON export 버전 8.5.7로 갱신
+
+- Controls.tsx
+  - 빠른 시각 진행 조절을 상단으로 이동
+  - running 상태 안내 추가
+
+- CanvasView.tsx
+  - footer에 tick/time/pulse 표시
+  - mass-bond 표시 밀도와 edge 투명도 기본값 낮춤
+
+- defaults.ts
+  - simulationSpeedMultiplier 3.2
+  - engineStepsPerFrame 5
+  - maxCatchUpSteps 12
+  - maxRenderedEdges 900
+  - maxRenderedNodes 800
+
+
+## v8.5.8 코드 변경 요약
+
+- Controls.tsx
+  - onToggle 제거
+  - onRun, onPause, onBurst 추가
+  - 실행 고정 / 일시정지 / 터보 300스텝 버튼 분리
+
+- App.tsx
+  - burst() 추가: 현재 설정의 fixed step으로 300번 즉시 진행
+  - Controls props 갱신
+  - JSON export 버전 8.5.8로 갱신

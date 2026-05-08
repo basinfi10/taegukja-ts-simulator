@@ -276,7 +276,7 @@ export function CanvasView({ snapshot, width, height, selectedIds, onSelect, onE
     ctx.fillStyle = 'rgba(230,238,255,.86)';
     ctx.font = '12px system-ui, sans-serif';
     ctx.fillText(
-      `v8.5.6 visual · edge ${edgeDrawn}/${snapshot.edges.length} · snap ${snapshot.metrics.performanceMetrics?.snapshotFps ?? 0}fps · 분산 ${(snapshot.metrics.spatialSpreadRatio * 100).toFixed(0)}% · 뭉침 ${(snapshot.metrics.cohesionIndex * 100).toFixed(0)}%`,
+      `v8.5.7 · tick ${snapshot.metrics.tick} · t ${snapshot.metrics.time.toFixed(1)} · edge ${edgeDrawn}/${snapshot.edges.length} · snap ${snapshot.metrics.performanceMetrics?.snapshotFps ?? 0}fps · pulse ${snapshot.metrics.eventCycleMetrics.activePulseCount} · 뭉침 ${(snapshot.metrics.cohesionIndex * 100).toFixed(0)}%`,
       16,
       height - 16
     );

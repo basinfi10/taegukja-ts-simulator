@@ -1,7 +1,7 @@
 {
-  "name": "taegukja-ts-simulator-v8-5-6-visual-export",
+  "name": "taegukja-ts-simulator-v8-5-8-run-diagnostics",
   "private": true,
-  "version": "8.5.6",
+  "version": "8.5.8",
   "type": "module",
   "scripts": {
     "dev": "vite",

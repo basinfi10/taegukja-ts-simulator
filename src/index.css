@@ -372,3 +372,25 @@ h1 { margin: 0; font-size: 30px; line-height: 1.2; letter-spacing: -.03em; }
 .export-actions button:hover {
   background: rgba(139, 212, 255, 0.18);
 }
+
+
+.run-status {
+  margin-top: 8px;
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+.run-status.active {
+  color: #dffff2;
+  background: rgba(121, 255, 190, 0.10);
+  border-color: rgba(121, 255, 190, 0.26);
+}
+
+.run-status.paused {
+  color: #ffe2b0;
+  background: rgba(255, 190, 95, 0.10);
+  border-color: rgba(255, 190, 95, 0.28);
+}

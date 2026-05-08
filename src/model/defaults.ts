@@ -101,22 +101,22 @@ export const defaultConfig: SimulationConfig = {
   showFieldParticlesOnly: false,
 
   performanceMode: true,
-  renderSnapshotFps: 18,
+  renderSnapshotFps: 24,
   heavyMetricInterval: 5,
   particleDetectionInterval: 3,
   cycleDetectionInterval: 3,
   coarseFieldInterval: 3,
-  maxRenderedEdges: 1200,
-  maxRenderedNodes: 900,
+  maxRenderedEdges: 900,
+  maxRenderedNodes: 800,
 
-  engineStepsPerFrame: 3,
-  maxCatchUpSteps: 8,
-  simulationSpeedMultiplier: 1.8,
+  engineStepsPerFrame: 5,
+  maxCatchUpSteps: 12,
+  simulationSpeedMultiplier: 3.2,
   showFormationLabels: false,
   showInteractionLines: false,
   maxFormationWaves: 12,
   maxInteractionLines: 80,
-  edgeAlphaScale: 0.48,
-  massBondRenderRatio: 0.22,
-  cycleBondRenderRatio: 0.70
+  edgeAlphaScale: 0.36,
+  massBondRenderRatio: 0.12,
+  cycleBondRenderRatio: 0.85
 };

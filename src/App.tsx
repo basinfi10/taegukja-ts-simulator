@@ -17,7 +17,7 @@ export default function App() {
   const [config, setConfig] = useState<SimulationConfig>(defaultConfig);
   const engineRef = useRef<TaegukjaEngine>(new TaegukjaEngine(defaultConfig));
   const [snapshot, setSnapshot] = useState<SimulationSnapshot>(() => engineRef.current.getSnapshot());
-  const [running, setRunning] = useState(false);
+  const [running, setRunning] = useState(true);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const measuredSpsRef = useRef(0);
   const perfWindowRef = useRef({ lastMs: performance.now(), steps: 0 });
@@ -39,6 +39,16 @@ export default function App() {
 
   const step = useCallback(() => {
     engineRef.current.step((1 / 60) * config.simulationSpeedMultiplier);
+    setSnapshot(engineRef.current.getSnapshot());
+  }, [config.simulationSpeedMultiplier]);
+
+  const burst = useCallback(() => {
+    const steps = 300;
+    const fixedStep = (1 / 60) * Math.max(0.1, config.simulationSpeedMultiplier);
+    for (let i = 0; i < steps; i += 1) {
+      engineRef.current.step(fixedStep);
+    }
+    perfWindowRef.current.steps += steps;
     setSnapshot(engineRef.current.getSnapshot());
   }, [config.simulationSpeedMultiplier]);
 
@@ -127,15 +137,16 @@ export default function App() {
 
   const exportCurrentState = useCallback(() => {
     const snap = engineRef.current.getSnapshot();
-    downloadJson(`taegukja-v856-state-${Date.now()}.json`, {
+    downloadJson(`taegukja-v858-state-${Date.now()}.json`, {
       schema: 'taegukja-simulator-state',
-      version: '8.5.6',
+      version: '8.5.8',
       exportedAt: new Date().toISOString(),
       config,
       snapshot: snap,
       summary: {
         tick: snap.metrics.tick,
         time: snap.metrics.time,
+        running,
         measuredStepsPerSecond: config.measuredStepsPerSecond,
         particleCount: snap.metrics.particleCount,
         formingParticleCount: snap.metrics.formingParticleCount,
@@ -148,13 +159,13 @@ export default function App() {
         crossingProgressFraction: snap.metrics.scale.crossingProgressFraction
       }
     });
-  }, [config, downloadJson]);
+  }, [config, downloadJson, running]);
 
   const exportCompactReport = useCallback(() => {
     const snap = engineRef.current.getSnapshot();
-    downloadJson(`taegukja-v856-report-${Date.now()}.json`, {
+    downloadJson(`taegukja-v858-report-${Date.now()}.json`, {
       schema: 'taegukja-simulator-report',
-      version: '8.5.6',
+      version: '8.5.8',
       exportedAt: new Date().toISOString(),
       config,
       metrics: snap.metrics,
@@ -176,16 +187,19 @@ export default function App() {
     <div className="app-shell">
       <header className="hero">
         <div>
-          <p className="eyebrow">Taegeukja Cosmology Simulator v8.5.6.2</p>
-          <h1>태극자 1000~3000 균일 분산장 · 시각 흐름 개선 · 데이터 저장 시뮬레이터</h1>
+          <p className="eyebrow">Taegeukja Cosmology Simulator v8.5.8</p>
+          <h1>태극자 1000~3000 균일 분산장 · 실행 고정 · 터보 진행 진단 시뮬레이터</h1>
           <p>
-            화면 노드 1개를 실제 태극자 다수의 대표 셀로 해석합니다. v8.5.1은 대표 로드 100개를 소립자 1개 스케일로 재정립해 다수 입자 상호작용을 보며, 태극자 1 변화 = 1 플랑크 틱이라는 시간 정의를 시뮬레이터에 연결합니다. 브라우저가 실제 처리하는 SPS를 측정해 timeCompressionFactor를 자동 보정하고, v8.5.6은 과도한 edge/텍스트 렌더링을 줄이고, 엔진 catch-up step과 시각화 예산을 조정해 일반 PC에서도 사건 흐름이 보이도록 개선합니다. 설정·진행·결과는 JSON으로 저장할 수 있습니다.
+            화면 노드 1개를 실제 태극자 다수의 대표 셀로 해석합니다. v8.5.1은 대표 로드 100개를 소립자 1개 스케일로 재정립해 다수 입자 상호작용을 보며, 태극자 1 변화 = 1 플랑크 틱이라는 시간 정의를 시뮬레이터에 연결합니다. 브라우저가 실제 처리하는 SPS를 측정해 timeCompressionFactor를 자동 보정하고, v8.5.8은 실행/일시정지를 토글이 아니라 분리 버튼으로 바꾸고, 터보 300스텝 버튼을 추가해 실제 진행 여부를 즉시 확인할 수 있게 합니다.
           </p>
         </div>
         <div className="hero-card">
           <span>선택 태극자</span>
           <b>{selectedSummary}</b>
           <small>노드 클릭: 선택 · Shift+클릭: 2개 선택 · 더블클릭: 선택쌍 얽힘 연결</small>
+          <div className={running ? "run-status active" : "run-status paused"}>
+            {running ? "실행 중 · 자동 진행" : "정지 상태 · 실행 버튼을 눌러야 진행"}
+          </div>
           <div className="export-actions">
             <button onClick={exportCompactReport}>결과 보고서 저장</button>
             <button onClick={exportCurrentState}>전체 상태 저장</button>
@@ -193,7 +207,16 @@ export default function App() {
         </div>
       </header>
       <main className="layout">
-        <Controls config={config} running={running} onChange={changeConfig} onReset={reset} onToggle={() => setRunning((v) => !v)} onStep={step} />
+        <Controls
+          config={config}
+          running={running}
+          onChange={changeConfig}
+          onReset={reset}
+          onRun={() => setRunning(true)}
+          onPause={() => setRunning(false)}
+          onStep={step}
+          onBurst={burst}
+        />
         <section className="stage panel">
           <CanvasView snapshot={snapshot} width={config.width} height={config.height} selectedIds={selectedIds} onSelect={selectNode} onEntangle={entangle} forceView={config.showForceView} />
         </section>
