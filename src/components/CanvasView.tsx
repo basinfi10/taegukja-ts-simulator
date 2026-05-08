@@ -35,6 +35,8 @@ export function CanvasView({ snapshot, width, height, selectedIds, onSelect, onE
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
+    const perf = snapshot.metrics.performanceMetrics;
+    const edgeAlphaScale = perf?.edgeAlphaScale ?? 0.5;
 
     const bg = ctx.createLinearGradient(0, 0, width, height);
     bg.addColorStop(0, '#070b14');
@@ -155,7 +157,7 @@ export function CanvasView({ snapshot, width, height, selectedIds, onSelect, onE
       ctx.setLineDash([]);
     }
 
-    for (const ev of snapshot.formationEvents) {
+    for (const ev of snapshot.formationEvents.slice(-Math.max(0, perf?.maxFormationWaves ?? 12))) {
       const age = snapshot.metrics.tick - ev.tick;
       const alpha = clamp01(1 - age / 180) * (0.18 + 0.55 * ev.intensity);
       const wave = ev.radius + age * 0.42;
@@ -172,14 +174,14 @@ export function CanvasView({ snapshot, width, height, selectedIds, onSelect, onE
       ctx.arc(ev.x, ev.y, wave, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
-      if (age < 90) {
+      if ((perf?.showFormationLabels ?? false) && age < 90) {
         ctx.fillStyle = `rgba(235, 244, 255, ${alpha})`;
         ctx.font = '11px system-ui, sans-serif';
         ctx.fillText(ev.label, ev.x + 10, ev.y - 10);
       }
     }
 
-    for (const it of snapshot.particleInteractions) {
+    if (perf?.showInteractionLines ?? false) for (const it of snapshot.particleInteractions.slice(0, perf?.maxInteractionLines ?? 80)) {
       const strength = clamp01((Math.abs(it.net) + Math.abs(it.weak)) * 28);
       const color = it.mode === 'repel'
         ? `rgba(90, 205, 255, ${0.18 + strength * 0.38})`
@@ -205,20 +207,28 @@ export function CanvasView({ snapshot, width, height, selectedIds, onSelect, onE
     }
 
 
-    const maxEdges = Math.max(400, snapshot.metrics.performanceMetrics?.renderedEdgeBudget ?? 3200);
+    const maxEdges = Math.max(250, perf?.renderedEdgeBudget ?? 1200);
     const edgeStride = Math.max(1, Math.ceil(snapshot.edges.length / maxEdges));
+    const massBondRatio = perf?.massBondRenderRatio ?? 0.22;
+    const cycleBondRatio = perf?.cycleBondRenderRatio ?? 0.70;
     let edgeDrawn = 0;
     for (let i = 0; i < snapshot.edges.length; i += 1) {
       const edge = snapshot.edges[i];
-      const important = edge.kind === 'cycle-bond' || edge.kind === 'mass-bond' || edge.kind === 'entangled' || edge.binding > 0.38 || edge.circulationScore > 0.32;
+      const isMass = edge.kind === 'mass-bond';
+      const isCycle = edge.kind === 'cycle-bond';
+      const protectedEdge = edge.kind === 'entangled' || edge.binding > 0.72 || edge.circulationScore > 0.62;
+      const allowMass = !isMass || ((i % Math.max(1, Math.round(1 / Math.max(0.02, massBondRatio)))) === 0);
+      const allowCycle = !isCycle || ((i % Math.max(1, Math.round(1 / Math.max(0.02, cycleBondRatio)))) === 0);
+      const important = protectedEdge || (isCycle && allowCycle) || (isMass && allowMass);
       if (!important && i % edgeStride !== 0) continue;
-      if (!important && edgeDrawn > maxEdges) continue;
+      if (edgeDrawn >= maxEdges && !protectedEdge) continue;
       const a = snapshot.nodes[edge.a];
       const b = snapshot.nodes[edge.b];
       if (!a || !b) continue;
-      const alpha = clamp01(0.04 + edge.weight * 0.34 + edge.binding * 0.34 + edge.circulationScore * 0.18);
+      const alpha = clamp01((0.025 + edge.weight * 0.20 + edge.binding * 0.22 + edge.circulationScore * 0.18) * edgeAlphaScale);
+      if (alpha < 0.018) continue;
       ctx.strokeStyle = edgeColor(edge.kind, alpha);
-      ctx.lineWidth = edge.kind === 'cycle-bond' ? 2.2 + edge.circulationScore * 2.8 : edge.kind === 'mass-bond' ? 2.2 + edge.binding * 2.7 : edge.kind === 'entangled' ? 2.0 : 0.55 + edge.weight * 1.1;
+      ctx.lineWidth = edge.kind === 'cycle-bond' ? 1.0 + edge.circulationScore * 1.6 : edge.kind === 'mass-bond' ? 0.8 + edge.binding * 1.4 : edge.kind === 'entangled' ? 1.5 : 0.42 + edge.weight * 0.7;
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
       edgeDrawn += 1;
     }
@@ -266,7 +276,7 @@ export function CanvasView({ snapshot, width, height, selectedIds, onSelect, onE
     ctx.fillStyle = 'rgba(230,238,255,.86)';
     ctx.font = '12px system-ui, sans-serif';
     ctx.fillText(
-      `v8.5.4 perf · edge ${edgeDrawn}/${snapshot.edges.length} · snap ${snapshot.metrics.performanceMetrics?.snapshotFps ?? 0}fps · 분산 ${(snapshot.metrics.spatialSpreadRatio * 100).toFixed(0)}% · 뭉침 ${(snapshot.metrics.cohesionIndex * 100).toFixed(0)}%`,
+      `v8.5.6 visual · edge ${edgeDrawn}/${snapshot.edges.length} · snap ${snapshot.metrics.performanceMetrics?.snapshotFps ?? 0}fps · 분산 ${(snapshot.metrics.spatialSpreadRatio * 100).toFixed(0)}% · 뭉침 ${(snapshot.metrics.cohesionIndex * 100).toFixed(0)}%`,
       16,
       height - 16
     );

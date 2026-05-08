@@ -1,4 +1,4 @@
-# Taegeukja Simulator v8.5.6 — Performance Governor + Coarse Event Field
+# Taegeukja Simulator v8.5.6 — Visual Flow + Export
 
 ## 버전 확인
 
@@ -10,8 +10,8 @@ node -p "require('./package.json').version"
 예상 출력:
 
 ```txt
-taegukja-ts-simulator-v8-5-4-performance
-8.5.4
+taegukja-ts-simulator-v8-5-6-visual-export
+8.5.6
 ```
 
 ## 실행
@@ -27,54 +27,41 @@ npm run dev
 npm run build
 ```
 
-## Git main 브랜치 준비
+## v8.5.6 핵심 수정
 
-```bash
-git init
-git add .
-git commit -m "Initial commit: Taegeukja simulator v8.5.6"
-git branch -M main
-```
-
----
-
-## v8.5.6 핵심: 어디에서 시간이 많이 걸렸나?
-
-v8.5.3의 주요 병목은 다음이었습니다.
+사용자 캡처 기준으로 확인된 문제:
 
 ```txt
-1. requestAnimationFrame마다 getSnapshot()이 nodes/edges 전체를 복사
-2. Canvas가 매 snapshot마다 최대 12,000개 edge를 전부 렌더링
-3. 기본 forceView='all'로 노드마다 여러 힘 벡터를 렌더링
-4. samplePathStats에서 shortestPath를 여러 번 실행
-5. detectParticles, detectEventCycles, updateCoarseEventField가 매 step 무겁게 실행
-6. coarseField가 step마다 비워져 smoothing 효과가 약해짐
+1. 실측 SPS가 0.6까지 떨어짐
+2. 화면에 formation event label 텍스트가 너무 많이 표시됨
+3. mass-bond 노란 edge가 너무 많이 굵게 렌더링됨
+4. 시각적 움직임이 느리거나 단계별로 보임
+5. 진행 결과를 저장할 수 없어 후속 분석이 어려움
 ```
 
-## v8.5.6 수정
+수정:
 
 ```txt
-1. snapshot 갱신 FPS 제한: 기본 24fps
-2. edge 렌더링 예산 제한: 기본 3200개
-3. node 렌더링 예산 제한: 기본 1600개
-4. 기본 forceView='event'로 변경해 힘 벡터 렌더링 OFF
-5. shortestPath 기반 heavy metric 캐싱
-6. particle/cycle/coarse field 탐지 간격 설정
-7. coarseField step별 초기화 제거
-8. 성능 패널과 설정 추가
+1. 엔진 스텝/프레임, catch-up step, 시뮬레이션 속도 배율 추가
+2. formation label 기본 OFF
+3. particle interaction line 기본 OFF
+4. mass-bond/cycle-bond 표시 비율 조절
+5. edge 투명도 기본 축소
+6. edge/node 기본 렌더링 예산 축소
+7. 결과 보고서 JSON 저장
+8. 전체 상태 JSON 저장
 ```
 
-## 해석
+## 저장 기능
 
-엔진 step은 계속 진행하되, React state 복사와 Canvas 표시 비용을 줄입니다.  
-움직임이 적어 보이면 다음 순서로 확인하세요.
+상단 선택 태극자 카드에 버튼이 추가됩니다.
 
 ```txt
-1. measured SPS가 낮은가?
-2. edge/node 예산이 너무 높은가?
-3. snapshot FPS가 너무 낮은가?
-4. coarse field smoothing이 너무 높은가?
-5. forceView가 all인지 확인
+결과 보고서 저장
+전체 상태 저장
 ```
 
-일반 PC에서는 `forceView='event'`, edge 예산 2500~4000, snapshot 20~30fps가 적당합니다.
+- 결과 보고서: metrics, particles, events, priority candidates, cycle loops, coarse field
+- 전체 상태: config, snapshot 전체, 요약값
+
+이 JSON 파일을 다시 ChatGPT에 올리면 결과 분석과 파라미터 튜닝을 이어갈 수 있습니다.

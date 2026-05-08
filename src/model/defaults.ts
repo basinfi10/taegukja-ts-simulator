@@ -31,7 +31,7 @@ export const defaultConfig: SimulationConfig = {
   electromagneticScale: 0.58,
   weakScale: 0.38,
   gravityScale: 0.42,
-  graphFormationAttempts: 48,
+  graphFormationAttempts: 36,
   showForceView: 'event',
 
   planckLengthM: 1.616255e-35,
@@ -101,11 +101,22 @@ export const defaultConfig: SimulationConfig = {
   showFieldParticlesOnly: false,
 
   performanceMode: true,
-  renderSnapshotFps: 24,
-  heavyMetricInterval: 4,
+  renderSnapshotFps: 18,
+  heavyMetricInterval: 5,
   particleDetectionInterval: 3,
-  cycleDetectionInterval: 2,
+  cycleDetectionInterval: 3,
   coarseFieldInterval: 3,
-  maxRenderedEdges: 3200,
-  maxRenderedNodes: 1600
+  maxRenderedEdges: 1200,
+  maxRenderedNodes: 900,
+
+  engineStepsPerFrame: 3,
+  maxCatchUpSteps: 8,
+  simulationSpeedMultiplier: 1.8,
+  showFormationLabels: false,
+  showInteractionLines: false,
+  maxFormationWaves: 12,
+  maxInteractionLines: 80,
+  edgeAlphaScale: 0.48,
+  massBondRenderRatio: 0.22,
+  cycleBondRenderRatio: 0.70
 };

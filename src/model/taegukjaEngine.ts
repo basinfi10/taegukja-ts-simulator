@@ -65,7 +65,16 @@ export class TaegukjaEngine {
   private priorityCandidates: PriorityCandidate[] = [];
   private coarseField: CoarseFieldCell[] = [];
   private cachedPathStats: { avg: number; max: number; unreachable: number } = { avg: 0, max: 0, unreachable: 0 };
-  private cachedCoarseFieldMetrics: CoarseFieldMetrics;
+  private cachedCoarseFieldMetrics: CoarseFieldMetrics = {
+    cols: 0,
+    rows: 0,
+    maxPulseDensity: 0,
+    maxContinuity: 0,
+    maxLoopClosure: 0,
+    maxParticlePotential: 0,
+    activeCellRatio: 0,
+    meanActiveEnergy: 0
+  };
   private priorityRejected = 0;
   private prioritySelected = 0;
   private failedEdgeDecayCount = 0;
@@ -86,7 +95,6 @@ export class TaegukjaEngine {
   constructor(config: SimulationConfig) {
     this.config = { ...config };
     this.rng = new PRNG(config.seed);
-    this.cachedCoarseFieldMetrics = this.emptyCoarseFieldMetrics();
     this.lastMetrics = this.emptyMetrics();
     this.reset(config);
   }
@@ -1729,14 +1737,25 @@ export class TaegukjaEngine {
       heavyMetricInterval: this.config.heavyMetricInterval,
       particleDetectionInterval: this.config.particleDetectionInterval,
       cycleDetectionInterval: this.config.cycleDetectionInterval,
-      coarseFieldInterval: this.config.coarseFieldInterval
+      coarseFieldInterval: this.config.coarseFieldInterval,
+      edgeAlphaScale: this.config.edgeAlphaScale,
+      massBondRenderRatio: this.config.massBondRenderRatio,
+      cycleBondRenderRatio: this.config.cycleBondRenderRatio,
+      showFormationLabels: this.config.showFormationLabels,
+      showInteractionLines: this.config.showInteractionLines,
+      maxFormationWaves: this.config.maxFormationWaves,
+      maxInteractionLines: this.config.maxInteractionLines,
+      engineStepsPerFrame: this.config.engineStepsPerFrame,
+      maxCatchUpSteps: this.config.maxCatchUpSteps,
+      simulationSpeedMultiplier: this.config.simulationSpeedMultiplier
     };
   }
 
   private emptyCoarseFieldMetrics(): CoarseFieldMetrics {
+    const cfg = this.config;
     return {
-      cols: this.config.coarseGridCols || 1,
-      rows: this.config.coarseGridRows || 1,
+      cols: cfg?.coarseGridCols || 1,
+      rows: cfg?.coarseGridRows || 1,
       maxPulseDensity: 0,
       maxContinuity: 0,
       maxLoopClosure: 0,

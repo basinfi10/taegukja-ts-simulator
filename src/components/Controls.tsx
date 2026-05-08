@@ -47,7 +47,7 @@ export function Controls({ config, running, onChange, onReset, onToggle, onStep 
   const recommendedCompression = crossingTicks / Math.max(1, config.crossingVisualSeconds * effectiveSps);
   return (
     <aside className="panel controls">
-      <div className="panel-title">설정 · v8.5.6 성능 점검/coarse 사건장 엔진</div>
+      <div className="panel-title">설정 · v8.5.4 성능 점검/coarse 사건장 엔진</div>
       <div className="button-row">
         <button onClick={onToggle}>{running ? '일시정지' : '실행'}</button>
         <button onClick={onStep}>1스텝</button>
@@ -183,7 +183,7 @@ export function Controls({ config, running, onChange, onReset, onToggle, onStep 
       <Toggle label="입자 후보장 중심 표시" checked={config.showFieldParticlesOnly} onChange={(showFieldParticlesOnly) => onChange({ showFieldParticlesOnly })} hint="강한 입자 후보 주변 사건장만 강조하는 실험 옵션" />
       <p className="hint">v8.5.3은 미시 사건 전체 대신 격자형 사건장으로 pulse 밀도·연속성·루프 폐합률·입자 잠재장을 통계적으로 보존해 표현합니다.</p>
 
-      <div className="section-label">v8.5.6 PC 성능 점검/최적화</div>
+      <div className="section-label">v8.5.4 PC 성능 점검/최적화</div>
       <Toggle label="성능 모드 ON" checked={config.performanceMode} onChange={(performanceMode) => onChange({ performanceMode })} hint="무거운 통계와 렌더링을 일정 간격으로 분산" />
       <Slider label="snapshot 갱신 FPS" value={config.renderSnapshotFps} min={8} max={60} step={1} onChange={(renderSnapshotFps) => onChange({ renderSnapshotFps })} digits={0} />
       <Slider label="무거운 통계 계산 간격" value={config.heavyMetricInterval} min={1} max={12} step={1} onChange={(heavyMetricInterval) => onChange({ heavyMetricInterval })} digits={0} />
@@ -193,6 +193,19 @@ export function Controls({ config, running, onChange, onReset, onToggle, onStep 
       <Slider label="표시 edge 예산" value={config.maxRenderedEdges} min={500} max={12000} step={100} onChange={(maxRenderedEdges) => onChange({ maxRenderedEdges })} digits={0} />
       <Slider label="표시 node 예산" value={config.maxRenderedNodes} min={300} max={3000} step={100} onChange={(maxRenderedNodes) => onChange({ maxRenderedNodes })} digits={0} />
       <p className="hint">움직임이 적으면 snapshot FPS보다 measured SPS와 edge/node 렌더링 예산을 먼저 봐야 합니다. 기본값은 힘 벡터 표시를 끄고 edge 표시 수를 제한해 step 처리량을 우선 확보합니다.</p>
+
+      <div className="section-label">v8.5.6 시각 흐름/렌더링 튜닝</div>
+      <Slider label="엔진 스텝/프레임" value={config.engineStepsPerFrame} min={1} max={12} step={1} onChange={(engineStepsPerFrame) => onChange({ engineStepsPerFrame })} digits={0} />
+      <Slider label="최대 catch-up 스텝" value={config.maxCatchUpSteps} min={1} max={24} step={1} onChange={(maxCatchUpSteps) => onChange({ maxCatchUpSteps })} digits={0} />
+      <Slider label="시뮬레이션 속도 배율" value={config.simulationSpeedMultiplier} min={0.2} max={8} step={0.1} onChange={(simulationSpeedMultiplier) => onChange({ simulationSpeedMultiplier })} />
+      <Slider label="edge 투명도 배율" value={config.edgeAlphaScale} min={0.05} max={1.4} step={0.05} onChange={(edgeAlphaScale) => onChange({ edgeAlphaScale })} />
+      <Slider label="mass-bond 표시 비율" value={config.massBondRenderRatio} min={0.02} max={1} step={0.02} onChange={(massBondRenderRatio) => onChange({ massBondRenderRatio })} />
+      <Slider label="cycle-bond 표시 비율" value={config.cycleBondRenderRatio} min={0.05} max={1} step={0.05} onChange={(cycleBondRenderRatio) => onChange({ cycleBondRenderRatio })} />
+      <Toggle label="형성 이벤트 텍스트 표시" checked={config.showFormationLabels} onChange={(showFormationLabels) => onChange({ showFormationLabels })} hint="화면에 보이던 score/label 텍스트. 기본 OFF" />
+      <Toggle label="입자 상호작용선 표시" checked={config.showInteractionLines} onChange={(showInteractionLines) => onChange({ showInteractionLines })} hint="입자 간 힘 선. 기본 OFF" />
+      <Slider label="형성 파동 최대 수" value={config.maxFormationWaves} min={0} max={80} step={1} onChange={(maxFormationWaves) => onChange({ maxFormationWaves })} digits={0} />
+      <Slider label="상호작용선 최대 수" value={config.maxInteractionLines} min={0} max={400} step={10} onChange={(maxInteractionLines) => onChange({ maxInteractionLines })} digits={0} />
+      <p className="hint">캡처에서 보인 흰색 텍스트는 formation event label입니다. v8.5.6에서는 기본 OFF로 두고, 분석이 필요할 때만 켜도록 바꿨습니다.</p>
       <Slider label="평균 연결도" value={config.averageDegree} min={2} max={10} step={1} onChange={(averageDegree) => onChange({ averageDegree, maxLinks: Math.max(config.maxLinks, Math.floor(config.nodeCount * averageDegree * 0.9)) })} digits={0} />
       <Slider label="최대 연결 수" value={config.maxLinks} min={500} max={80000} step={100} onChange={(maxLinks) => onChange({ maxLinks })} digits={0} />
       <Slider label="Cₜ/c" value={config.ctRatio} min={1} max={80} step={1} onChange={(ctRatio) => onChange({ ctRatio })} digits={0} />

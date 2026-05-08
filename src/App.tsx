@@ -38,9 +38,9 @@ export default function App() {
   }, []);
 
   const step = useCallback(() => {
-    engineRef.current.step(1 / 60);
+    engineRef.current.step((1 / 60) * config.simulationSpeedMultiplier);
     setSnapshot(engineRef.current.getSnapshot());
-  }, []);
+  }, [config.simulationSpeedMultiplier]);
 
   useEffect(() => {
     let frame = 0;
@@ -49,10 +49,13 @@ export default function App() {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
       if (running) {
-        const substeps = config.nodeCount > 2500 ? 1 : config.nodeCount > 300 ? 1 : 2;
+        const frameSteps = config.performanceMode
+          ? Math.min(config.maxCatchUpSteps, Math.max(config.engineStepsPerFrame, Math.ceil(dt * 60 * 0.65)))
+          : 1;
         let executedSteps = 0;
-        for (let i = 0; i < substeps; i += 1) {
-          engineRef.current.step(dt / substeps);
+        const fixedStep = (1 / 60) * config.simulationSpeedMultiplier;
+        for (let i = 0; i < frameSteps; i += 1) {
+          engineRef.current.step(fixedStep);
           executedSteps += 1;
         }
         perfWindowRef.current.steps += executedSteps;
@@ -95,7 +98,10 @@ export default function App() {
     config.particleEffectiveRadiusM,
     config.planckTimeS,
     config.performanceMode,
-    config.renderSnapshotFps
+    config.renderSnapshotFps,
+    config.engineStepsPerFrame,
+    config.maxCatchUpSteps,
+    config.simulationSpeedMultiplier
   ]);
 
   const selectNode = useCallback((id: number, append: boolean) => {
@@ -106,6 +112,59 @@ export default function App() {
     engineRef.current.createEntanglement(a, b);
     setSnapshot(engineRef.current.getSnapshot());
   }, []);
+
+  const downloadJson = useCallback((filename: string, payload: unknown) => {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const exportCurrentState = useCallback(() => {
+    const snap = engineRef.current.getSnapshot();
+    downloadJson(`taegukja-v856-state-${Date.now()}.json`, {
+      schema: 'taegukja-simulator-state',
+      version: '8.5.6',
+      exportedAt: new Date().toISOString(),
+      config,
+      snapshot: snap,
+      summary: {
+        tick: snap.metrics.tick,
+        time: snap.metrics.time,
+        measuredStepsPerSecond: config.measuredStepsPerSecond,
+        particleCount: snap.metrics.particleCount,
+        formingParticleCount: snap.metrics.formingParticleCount,
+        stableParticleCount: snap.metrics.stableParticleCount,
+        completeParticleCount: snap.metrics.completeParticleCount,
+        massBondCount: snap.metrics.massBondCount,
+        cycleBondCount: snap.metrics.eventCycleMetrics.cycleBondCount,
+        activePulseCount: snap.metrics.eventCycleMetrics.activePulseCount,
+        activeCellRatio: snap.metrics.coarseFieldMetrics.activeCellRatio,
+        crossingProgressFraction: snap.metrics.scale.crossingProgressFraction
+      }
+    });
+  }, [config, downloadJson]);
+
+  const exportCompactReport = useCallback(() => {
+    const snap = engineRef.current.getSnapshot();
+    downloadJson(`taegukja-v856-report-${Date.now()}.json`, {
+      schema: 'taegukja-simulator-report',
+      version: '8.5.6',
+      exportedAt: new Date().toISOString(),
+      config,
+      metrics: snap.metrics,
+      particles: snap.particles,
+      formationEvents: snap.formationEvents.slice(-80),
+      priorityCandidates: snap.priorityCandidates.slice(0, 80),
+      cycleLoops: snap.cycleLoops.slice(0, 120),
+      coarseField: snap.coarseField
+    });
+  }, [config, downloadJson]);
 
   const selectedSummary = useMemo(() => {
     if (selectedIds.length === 0) return '선택 없음';
@@ -118,15 +177,19 @@ export default function App() {
       <header className="hero">
         <div>
           <p className="eyebrow">Taegeukja Cosmology Simulator v8.5.6.2</p>
-          <h1>태극자 1000~3000 균일 분산장 · 실측 시간 보정 · 동적 pulse/cycle-bond 시뮬레이터</h1>
+          <h1>태극자 1000~3000 균일 분산장 · 시각 흐름 개선 · 데이터 저장 시뮬레이터</h1>
           <p>
-            화면 노드 1개를 실제 태극자 다수의 대표 셀로 해석합니다. v8.5.1은 대표 로드 100개를 소립자 1개 스케일로 재정립해 다수 입자 상호작용을 보며, 태극자 1 변화 = 1 플랑크 틱이라는 시간 정의를 시뮬레이터에 연결합니다. 브라우저가 실제 처리하는 SPS를 측정해 timeCompressionFactor를 자동 보정하고, v8.5.6은 snapshot 갱신 빈도, edge/node 렌더링 예산, 무거운 통계 계산 간격을 조절해 일반 PC에서도 step이 막히지 않도록 성능 병목을 줄입니다.
+            화면 노드 1개를 실제 태극자 다수의 대표 셀로 해석합니다. v8.5.1은 대표 로드 100개를 소립자 1개 스케일로 재정립해 다수 입자 상호작용을 보며, 태극자 1 변화 = 1 플랑크 틱이라는 시간 정의를 시뮬레이터에 연결합니다. 브라우저가 실제 처리하는 SPS를 측정해 timeCompressionFactor를 자동 보정하고, v8.5.6은 과도한 edge/텍스트 렌더링을 줄이고, 엔진 catch-up step과 시각화 예산을 조정해 일반 PC에서도 사건 흐름이 보이도록 개선합니다. 설정·진행·결과는 JSON으로 저장할 수 있습니다.
           </p>
         </div>
         <div className="hero-card">
           <span>선택 태극자</span>
           <b>{selectedSummary}</b>
           <small>노드 클릭: 선택 · Shift+클릭: 2개 선택 · 더블클릭: 선택쌍 얽힘 연결</small>
+          <div className="export-actions">
+            <button onClick={exportCompactReport}>결과 보고서 저장</button>
+            <button onClick={exportCurrentState}>전체 상태 저장</button>
+          </div>
         </div>
       </header>
       <main className="layout">

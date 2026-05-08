@@ -350,7 +350,7 @@ cycleBondThreshold: 0.36
 - `MetricsPanel`에 coarse field 관측 카드 추가
 
 
-## v8.5.6 성능 패치 요약
+## v8.5.4 성능 패치 요약
 
 - `SimulationConfig.performanceMode` 추가
 - `renderSnapshotFps`, `heavyMetricInterval`, `particleDetectionInterval`, `cycleDetectionInterval`, `coarseFieldInterval` 추가
@@ -362,3 +362,22 @@ cycleBondThreshold: 0.36
 - `TaegukjaEngine.samplePathStats()` 캐싱
 - `detectParticles()`, `detectEventCycles()`, `updateCoarseEventField()` interval scheduling
 - step마다 coarseField를 비우던 문제 제거
+
+
+## v8.5.6 코드 변경 요약
+
+- App.tsx
+  - engineStepsPerFrame, maxCatchUpSteps, simulationSpeedMultiplier 적용
+  - 결과 보고서 저장 / 전체 상태 저장 JSON export 추가
+
+- CanvasView.tsx
+  - formation label 기본 OFF
+  - particle interaction line 기본 OFF
+  - mass-bond/cycle-bond 표시 비율 적용
+  - edgeAlphaScale 적용
+
+- Controls.tsx
+  - 시각 흐름/렌더링 튜닝 설정 추가
+
+- types/defaults
+  - v8.5.6 설정값과 PerformanceMetrics 확장

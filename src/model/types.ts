@@ -137,7 +137,7 @@ export interface SimulationConfig {
   coarseFieldIntensity: number;
   showFieldParticlesOnly: boolean;
 
-  /** v8.5.6 PC performance governor */
+  /** v8.5.4 PC performance governor */
   performanceMode: boolean;
   renderSnapshotFps: number;
   heavyMetricInterval: number;
@@ -146,6 +146,18 @@ export interface SimulationConfig {
   coarseFieldInterval: number;
   maxRenderedEdges: number;
   maxRenderedNodes: number;
+
+  /** v8.5.6 visual simulation mode */
+  engineStepsPerFrame: number;
+  maxCatchUpSteps: number;
+  simulationSpeedMultiplier: number;
+  showFormationLabels: boolean;
+  showInteractionLines: boolean;
+  maxFormationWaves: number;
+  maxInteractionLines: number;
+  edgeAlphaScale: number;
+  massBondRenderRatio: number;
+  cycleBondRenderRatio: number;
 }
 
 
@@ -505,6 +517,16 @@ export interface PerformanceMetrics {
   particleDetectionInterval: number;
   cycleDetectionInterval: number;
   coarseFieldInterval: number;
+  edgeAlphaScale: number;
+  massBondRenderRatio: number;
+  cycleBondRenderRatio: number;
+  showFormationLabels: boolean;
+  showInteractionLines: boolean;
+  maxFormationWaves: number;
+  maxInteractionLines: number;
+  engineStepsPerFrame: number;
+  maxCatchUpSteps: number;
+  simulationSpeedMultiplier: number;
 }
 
 export interface SimulationMetrics {
