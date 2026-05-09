@@ -417,3 +417,22 @@ cycleBondThreshold: 0.36
   - burst() 추가: 현재 설정의 fixed step으로 300번 즉시 진행
   - Controls props 갱신
   - JSON export 버전 8.5.8로 갱신
+
+
+## v8.5.9 코드 변경 요약
+
+- 이벤트 포화 방지:
+  - `applyEventAntiSaturation()` 추가
+  - avg eventActivity/eventContinuity가 target을 넘으면 activity, continuity, pulseStrength를 완만히 낮춤
+
+- 지역 입자 분리:
+  - `splitLargeParticleComponents()` 추가
+  - 거대 connected component가 `nodesPerParticleBase * maxParticleComponentFactor`를 넘으면 k-means 유사 지역 분리 수행
+
+- 기본값 보정:
+  - maxLinks 12000 → 9000
+  - resonanceThreshold 0.54 → 0.60
+  - eventCouplingStrength 1.85 → 1.18
+  - continuityGain 0.18 → 0.085
+  - cycleBondThreshold 0.36 → 0.44
+  - targetPulseDensity 0.055 → 0.038

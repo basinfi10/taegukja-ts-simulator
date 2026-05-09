@@ -49,7 +49,7 @@ export function Controls({ config, running, onChange, onReset, onRun, onPause, o
   const recommendedCompression = crossingTicks / Math.max(1, config.crossingVisualSeconds * effectiveSps);
   return (
     <aside className="panel controls">
-      <div className="panel-title">설정 · v8.5.8 실행 고정/진행 진단 엔진</div>
+      <div className="panel-title">설정 · v8.5.9 포화 방지/지역 입자 분리 엔진</div>
       <div className="button-row">
         <button onClick={onRun} disabled={running}>실행 고정</button>
         <button onClick={onPause} disabled={!running}>일시정지</button>
@@ -66,6 +66,14 @@ export function Controls({ config, running, onChange, onReset, onRun, onPause, o
       <Slider label="엔진 스텝/프레임" value={config.engineStepsPerFrame} min={1} max={16} step={1} onChange={(engineStepsPerFrame) => onChange({ engineStepsPerFrame })} digits={0} />
       <Slider label="최대 catch-up 스텝" value={config.maxCatchUpSteps} min={1} max={32} step={1} onChange={(maxCatchUpSteps) => onChange({ maxCatchUpSteps })} digits={0} />
       <p className="hint">시간 압축 K_t는 물리 시간 표시용입니다. 화면 움직임은 주로 시뮬레이션 속도 배율과 엔진 스텝/프레임으로 조절하세요.</p>
+
+      <div className="section-label">v8.5.9 포화 방지/지역 입자 분리</div>
+      <Toggle label="이벤트 포화 방지 ON" checked={config.enableAntiSaturation} onChange={(enableAntiSaturation) => onChange({ enableAntiSaturation })} hint="eventActivity/continuity가 1에 붙어 정지장처럼 보이는 현상 완화" />
+      <Slider label="목표 이벤트 활동도" value={config.targetEventActivity} min={0.35} max={0.95} step={0.01} onChange={(targetEventActivity) => onChange({ targetEventActivity })} />
+      <Slider label="포화 감쇠 강도" value={config.eventSaturationDamping} min={0} max={1.2} step={0.02} onChange={(eventSaturationDamping) => onChange({ eventSaturationDamping })} />
+      <Toggle label="거대 입자 후보 지역 분리" checked={config.splitLargeParticleComponents} onChange={(splitLargeParticleComponents) => onChange({ splitLargeParticleComponents })} hint="하나의 거대 connected component를 여러 지역 입자 후보로 분리" />
+      <Slider label="최대 입자 컴포넌트 배율" value={config.maxParticleComponentFactor} min={1.0} max={5.0} step={0.1} onChange={(maxParticleComponentFactor) => onChange({ maxParticleComponentFactor })} />
+      <p className="hint">분석 데이터에서 largestParticleSize=1349, eventActivity=1, eventContinuity=1로 포화되었습니다. v8.5.9는 거대 단일 입자장 잠김을 줄입니다.</p>
 
       <div className="section-label">실제 스케일 정의</div>
       <label className="select-row">목표 입자 에너지

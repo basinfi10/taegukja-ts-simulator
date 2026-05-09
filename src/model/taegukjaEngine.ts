@@ -928,6 +928,32 @@ export class TaegukjaEngine {
     if (!this.config.performanceMode || this.tick % Math.max(1, this.config.cycleDetectionInterval) === 0) this.detectEventCycles(scaledDt);
   }
 
+
+  private applyEventAntiSaturation(scaledDt: number): void {
+    if (!this.config.enableAntiSaturation || this.nodes.length === 0) return;
+    const avgActivity = this.nodes.reduce((s, n) => s + n.eventActivity, 0) / this.nodes.length;
+    const avgContinuity = this.nodes.reduce((s, n) => s + n.eventContinuity, 0) / this.nodes.length;
+    const target = clamp(this.config.targetEventActivity, 0.35, 0.95);
+    const excess = clamp01(Math.max(avgActivity, avgContinuity) - target);
+    if (excess <= 0) return;
+
+    const damping = this.config.eventSaturationDamping * excess * scaledDt;
+    for (const n of this.nodes) {
+      n.eventActivity = clamp01(n.eventActivity - damping * 0.30);
+      n.eventContinuity = clamp01(n.eventContinuity - damping * 0.22);
+      n.triggerPotential = clamp01(n.triggerPotential - damping * 0.18);
+      n.cycleMemory = clamp01(n.cycleMemory - damping * 0.10);
+    }
+    for (const e of this.edges) {
+      if (e.kind !== 'cycle-bond' && e.kind !== 'entangled') {
+        e.eventContinuity = clamp01(e.eventContinuity - damping * 0.18);
+        e.pulseStrength = clamp01(e.pulseStrength - damping * 0.20);
+        e.historySuccess = clamp01(e.historySuccess - damping * 0.04);
+      }
+      if (e.kind === 'mass-bond' && e.binding < 0.55) e.binding = clamp01(e.binding - damping * 0.16);
+    }
+  }
+
   private eventPhaseError(a: TaegukjaNode, b: TaegukjaNode, edge: TaegukjaEdge): number {
     // edge triggerDelay를 포함한 전달 위상 오차입니다.
     return signedAngleDelta(a.eventClock + edge.triggerDelay + edge.pulsePhase * 0.20, b.eventClock);
@@ -1333,21 +1359,27 @@ export class TaegukjaEngine {
       }
 
       if (ids.length >= this.config.minParticleNodes) {
-        const particle = this.makeParticle(cid, ids);
-        const boundRatio = particle.boundEnergy / Math.max(1e-9, particle.totalEnergy + particle.boundEnergy);
-        const visibleCandidate =
-          particle.solitonScore >= Math.max(0.16, this.config.particleThreshold * 0.30) ||
-          particle.particleScaleFraction >= 0.012 ||
-          boundRatio >= 0.025 ||
-          particle.size >= this.config.minParticleNodes * 2;
+        const candidateGroups = this.splitLargeParticleComponents(ids);
+        for (const groupIds of candidateGroups) {
+          if (groupIds.length < this.config.minParticleNodes) continue;
+          const particle = this.makeParticle(cid, groupIds);
+          const boundRatio = particle.boundEnergy / Math.max(1e-9, particle.totalEnergy + particle.boundEnergy);
+          const visibleCandidate =
+            particle.solitonScore >= Math.max(0.16, this.config.particleThreshold * 0.30) ||
+            particle.particleScaleFraction >= 0.012 ||
+            boundRatio >= 0.025 ||
+            particle.size >= this.config.minParticleNodes * 2;
 
-        if (visibleCandidate) {
-          particles.push(particle);
-          currentKeys.add(this.particleStableKey(particle));
-          for (const id of ids) this.nodes[id].isParticleCore = true;
+          if (visibleCandidate) {
+            particles.push(particle);
+            currentKeys.add(this.particleStableKey(particle));
+            for (const id of groupIds) this.nodes[id].isParticleCore = true;
+          }
+          cid += 1;
         }
+      } else {
+        cid += 1;
       }
-      cid += 1;
     }
 
     particles.sort((a, b) =>
@@ -1385,6 +1417,80 @@ export class TaegukjaEngine {
     this.previousStableCount = stableCount;
     this.previousParticleKeys = currentKeys;
     this.particles = tracked;
+  }
+
+
+  private splitLargeParticleComponents(ids: number[]): number[][] {
+    if (!this.config.splitLargeParticleComponents) return [ids];
+    const target = Math.max(this.config.minParticleNodes, Math.round(this.config.nodesPerParticleBase));
+    const maxComponent = Math.max(target * this.config.maxParticleComponentFactor, this.config.minParticleNodes * 2);
+    if (ids.length <= maxComponent) return [ids];
+
+    const k = Math.max(2, Math.min(Math.ceil(ids.length / target), Math.ceil(this.nodes.length / this.config.minParticleNodes)));
+    const scored = [...ids].sort((a, b) => {
+      const na = this.nodes[a];
+      const nb = this.nodes[b];
+      const sa = na.eventContinuity + na.cycleMemory + na.boundEnergy * 0.25 + na.degree * 0.01;
+      const sb = nb.eventContinuity + nb.cycleMemory + nb.boundEnergy * 0.25 + nb.degree * 0.01;
+      return sb - sa;
+    });
+
+    const centers: Array<{ x: number; y: number }> = [];
+    for (const id of scored) {
+      const n = this.nodes[id];
+      if (centers.length === 0 || centers.every((c) => distance2D(c.x, c.y, n.x, n.y) > Math.max(32, this.config.initialLocalRadius * 0.68))) {
+        centers.push({ x: n.x, y: n.y });
+        if (centers.length >= k) break;
+      }
+    }
+    while (centers.length < k) {
+      const n = this.nodes[scored[centers.length % scored.length]];
+      centers.push({ x: n.x + this.rng.range(-8, 8), y: n.y + this.rng.range(-8, 8) });
+    }
+
+    let groups: number[][] = [];
+    for (let iter = 0; iter < 5; iter += 1) {
+      groups = Array.from({ length: centers.length }, () => [] as number[]);
+      for (const id of ids) {
+        const n = this.nodes[id];
+        let best = 0;
+        let bestD = Infinity;
+        for (let c = 0; c < centers.length; c += 1) {
+          const d = distance2D(n.x, n.y, centers[c].x, centers[c].y);
+          if (d < bestD) { bestD = d; best = c; }
+        }
+        groups[best].push(id);
+      }
+      centers.forEach((center, i) => {
+        const g = groups[i];
+        if (!g.length) return;
+        let x = 0, y = 0, w = 0;
+        for (const id of g) {
+          const n = this.nodes[id];
+          const weight = 0.35 + n.eventContinuity + n.cycleMemory + n.boundEnergy * 0.15;
+          x += n.x * weight;
+          y += n.y * weight;
+          w += weight;
+        }
+        center.x = x / Math.max(1e-9, w);
+        center.y = y / Math.max(1e-9, w);
+      });
+    }
+
+    const finalGroups: number[][] = [];
+    for (const g of groups) {
+      if (g.length < this.config.minParticleNodes) continue;
+      if (g.length <= maxComponent * 1.25) {
+        finalGroups.push(g);
+      } else {
+        // Oversized remainder: cut by distance from centroid into local packets.
+        const cx = g.reduce((s, id) => s + this.nodes[id].x, 0) / g.length;
+        const cy = g.reduce((s, id) => s + this.nodes[id].y, 0) / g.length;
+        const sorted = [...g].sort((a, b) => distance2D(cx, cy, this.nodes[a].x, this.nodes[a].y) - distance2D(cx, cy, this.nodes[b].x, this.nodes[b].y));
+        for (let i = 0; i < sorted.length; i += target) finalGroups.push(sorted.slice(i, i + target));
+      }
+    }
+    return finalGroups.length ? finalGroups : [ids.slice(0, Math.min(ids.length, Math.round(maxComponent)))];
   }
 
   private particleStableKey(p: ParticleInfo): string {
@@ -1747,7 +1853,11 @@ export class TaegukjaEngine {
       maxInteractionLines: this.config.maxInteractionLines,
       engineStepsPerFrame: this.config.engineStepsPerFrame,
       maxCatchUpSteps: this.config.maxCatchUpSteps,
-      simulationSpeedMultiplier: this.config.simulationSpeedMultiplier
+      simulationSpeedMultiplier: this.config.simulationSpeedMultiplier,
+      targetEventActivity: this.config.targetEventActivity,
+      eventSaturationDamping: this.config.eventSaturationDamping,
+      maxParticleComponentFactor: this.config.maxParticleComponentFactor,
+      splitLargeParticleComponents: this.config.splitLargeParticleComponents
     };
   }
 

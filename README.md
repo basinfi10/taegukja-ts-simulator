@@ -1,4 +1,4 @@
-# Taegeukja Simulator v8.5.8 — Run Diagnostics + Fixed Run Controls
+# Taegeukja Simulator v8.5.9 — Anti-Saturation + Local Particle Splitting
 
 ## 버전 확인
 
@@ -10,8 +10,8 @@ node -p "require('./package.json').version"
 예상 출력:
 
 ```txt
-taegukja-ts-simulator-v8-5-8-run-diagnostics
-8.5.8
+taegukja-ts-simulator-v8-5-9-anti-saturation
+8.5.9
 ```
 
 ## 실행
@@ -27,41 +27,47 @@ npm run dev
 npm run build
 ```
 
-## 이번 수정의 핵심
+## v8.5.9 수정 이유
 
-이전 버전의 실행 버튼은 토글 방식이었습니다.
-
-```txt
-실행 버튼 1회 클릭 → 실행
-다시 클릭 → 정지
-```
-
-따라서 사용자가 계속 실행시키려고 여러 번 누르면 실제로는 실행/정지가 반복될 수 있었습니다.
-
-v8.5.8에서는 버튼을 분리했습니다.
+업로드된 v8.5.8 상태 데이터에서 다음 문제가 확인되었습니다.
 
 ```txt
-실행 고정
-일시정지
-1스텝
-터보 300스텝
-재생성
+tick: 315
+running: true
+measured SPS: 약 0.94
+linkCount: 12000 최대치
+massBondCount: 2633
+cycleBondCount: 302
+activePulseCount: 259 / target 260
+avgEventActivity: 1
+avgEventContinuity: 1
+largestParticleSize: 1349
+largestParticleScaleFraction: 13.49
 ```
 
-## 확인 방법
+즉 실행이 안 된 것이 아니라, 너무 빨리 과포화되어 하나의 거대 입자장으로 잠겼습니다.
 
-1. 화면을 열면 자동 실행 상태입니다.
-2. 정지 상태라면 `실행 고정`을 누릅니다.
-3. 즉시 진행 여부를 확인하려면 `터보 300스텝`을 누릅니다.
-4. 중앙 화면 하단의 tick/time/pulse 값을 봅니다.
-5. 결과 보고서 저장으로 JSON을 내려받아 분석할 수 있습니다.
-
-## 여전히 진행이 약할 때
+## v8.5.9 핵심
 
 ```txt
-시뮬레이션 속도 배율: 3.2 → 5.0
-엔진 스텝/프레임: 5 → 8
-터보 300스텝 클릭
-edge 예산: 900 이하 유지
-형성 이벤트 텍스트: OFF 유지
+1. 이벤트 포화 방지
+2. eventActivity/continuity가 1에 붙는 현상 감쇠
+3. 거대 connected component를 지역 입자 후보로 분리
+4. maxLinks와 event coupling 기본값 완화
+5. mass-bond/cycle-bond 과다 생성을 줄임
+6. pulse governor 목표 밀도 하향
 ```
+
+## 새 설정
+
+```txt
+enableAntiSaturation
+targetEventActivity
+eventSaturationDamping
+splitLargeParticleComponents
+maxParticleComponentFactor
+```
+
+## 관찰 목표
+
+v8.5.9에서는 하나의 1349-node 거대 입자가 아니라, 100~180 node급 지역 입자 후보 여러 개가 생기는지 확인합니다.

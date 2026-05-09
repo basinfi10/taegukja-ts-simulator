@@ -24,7 +24,7 @@ export function MetricsPanel({ snapshot }: { snapshot: SimulationSnapshot }) {
   const pm = m.performanceMetrics;
   return (
     <aside className="panel metrics">
-      <div className="panel-title">관측값 · v8.5.4 성능 병목/coarse 사건장</div>
+      <div className="panel-title">관측값 · v8.5.9 포화 방지/coarse 사건장</div>
       <div className="scale-card">
         <b>소립자 1개 목표 스케일</b>
         <code>N_real = (r / ℓ_TQ)³</code>
@@ -109,6 +109,11 @@ export function MetricsPanel({ snapshot }: { snapshot: SimulationSnapshot }) {
           <span>steps/frame <b>{pm.engineStepsPerFrame}</b></span>
           <span>catch-up <b>{pm.maxCatchUpSteps}</b></span>
           <span>speed <b>{pm.simulationSpeedMultiplier.toFixed(1)}×</b></span>
+        </div>
+        <div className="decomp-summary">
+          <span>target activity <b>{pm.targetEventActivity.toFixed(2)}</b></span>
+          <span>saturation damp <b>{pm.eventSaturationDamping.toFixed(2)}</b></span>
+          <span>split giant <b>{pm.splitLargeParticleComponents ? 'ON' : 'OFF'}</b></span>
         </div>
         <code>주요 병목: getSnapshot 전체 복사 + Canvas 전체 edge 렌더링 + shortestPath/particle/cycle/coarse 통계</code>
         <code>해결: snapshot throttling + render budget + interval scheduling + coarse smoothing 유지</code>

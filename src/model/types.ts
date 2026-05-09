@@ -158,6 +158,13 @@ export interface SimulationConfig {
   edgeAlphaScale: number;
   massBondRenderRatio: number;
   cycleBondRenderRatio: number;
+
+  /** v8.5.9 anti-saturation / local particle splitting */
+  enableAntiSaturation: boolean;
+  targetEventActivity: number;
+  eventSaturationDamping: number;
+  maxParticleComponentFactor: number;
+  splitLargeParticleComponents: boolean;
 }
 
 
@@ -527,6 +534,10 @@ export interface PerformanceMetrics {
   engineStepsPerFrame: number;
   maxCatchUpSteps: number;
   simulationSpeedMultiplier: number;
+  targetEventActivity: number;
+  eventSaturationDamping: number;
+  maxParticleComponentFactor: number;
+  splitLargeParticleComponents: boolean;
 }
 
 export interface SimulationMetrics {

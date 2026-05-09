@@ -1,7 +1,7 @@
 {
-  "name": "taegukja-ts-simulator-v8-5-8-run-diagnostics",
+  "name": "taegukja-ts-simulator-v8-5-9-anti-saturation",
   "private": true,
-  "version": "8.5.8",
+  "version": "8.5.9",
   "type": "module",
   "scripts": {
     "dev": "vite",
