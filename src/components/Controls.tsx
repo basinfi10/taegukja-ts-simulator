@@ -49,7 +49,7 @@ export function Controls({ config, running, onChange, onReset, onRun, onPause, o
   const recommendedCompression = crossingTicks / Math.max(1, config.crossingVisualSeconds * effectiveSps);
   return (
     <aside className="panel controls">
-      <div className="panel-title">설정 · v8.5.9 포화 방지/지역 입자 분리 엔진</div>
+      <div className="panel-title">설정 · v8.6 안정 입자 검증 엔진</div>
       <div className="button-row">
         <button onClick={onRun} disabled={running}>실행 고정</button>
         <button onClick={onPause} disabled={!running}>일시정지</button>
@@ -74,6 +74,19 @@ export function Controls({ config, running, onChange, onReset, onRun, onPause, o
       <Toggle label="거대 입자 후보 지역 분리" checked={config.splitLargeParticleComponents} onChange={(splitLargeParticleComponents) => onChange({ splitLargeParticleComponents })} hint="하나의 거대 connected component를 여러 지역 입자 후보로 분리" />
       <Slider label="최대 입자 컴포넌트 배율" value={config.maxParticleComponentFactor} min={1.0} max={5.0} step={0.1} onChange={(maxParticleComponentFactor) => onChange({ maxParticleComponentFactor })} />
       <p className="hint">분석 데이터에서 largestParticleSize=1349, eventActivity=1, eventContinuity=1로 포화되었습니다. v8.5.9는 거대 단일 입자장 잠김을 줄입니다.</p>
+
+      <div className="section-label">v8.6 안정 입자 검증기</div>
+      <Toggle label="stable verifier ON" checked={config.enableStableVerifier} onChange={(enableStableVerifier) => onChange({ enableStableVerifier })} hint="후보 생존 시간, 내부/외부 결합, 순환 지속성을 추적" />
+      <Slider label="검증 히스토리 창" value={config.stableVerifierWindow} min={24} max={300} step={6} onChange={(stableVerifierWindow) => onChange({ stableVerifierWindow })} digits={0} />
+      <Slider label="최소 생존 틱" value={config.stableMinSurvivalTicks} min={20} max={600} step={10} onChange={(stableMinSurvivalTicks) => onChange({ stableMinSurvivalTicks })} digits={0} />
+      <Slider label="최소 crossing 진행률" value={config.stableMinCrossingProgress} min={0.02} max={1.0} step={0.01} onChange={(stableMinCrossingProgress) => onChange({ stableMinCrossingProgress })} />
+      <Slider label="최소 cycle continuity" value={config.stableMinCycleContinuity} min={0.2} max={1.0} step={0.01} onChange={(stableMinCycleContinuity) => onChange({ stableMinCycleContinuity })} />
+      <Slider label="최소 내부 결합 비율" value={config.stableMinInternalBondRatio} min={0.1} max={0.95} step={0.01} onChange={(stableMinInternalBondRatio) => onChange({ stableMinInternalBondRatio })} />
+      <Slider label="최대 외부 결합 비율" value={config.stableMaxExternalBondRatio} min={0.05} max={0.9} step={0.01} onChange={(stableMaxExternalBondRatio) => onChange({ stableMaxExternalBondRatio })} />
+      <Slider label="검증 안정 점수 기준" value={config.stableVerifierScoreThreshold} min={0.25} max={0.95} step={0.01} onChange={(stableVerifierScoreThreshold) => onChange({ stableVerifierScoreThreshold })} />
+      <Slider label="후보 추적 병합 거리" value={config.verifierMergeDistance} min={20} max={180} step={2} onChange={(verifierMergeDistance) => onChange({ verifierMergeDistance })} digits={0} />
+      <Slider label="소멸 판정 유예 틱" value={config.verifierDecayGrace} min={20} max={300} step={5} onChange={(verifierDecayGrace) => onChange({ verifierDecayGrace })} digits={0} />
+      <p className="hint">v8.6의 stable은 단순히 크거나 완성률이 높은 후보가 아니라, 일정 시간 이상 살아남고 내부 순환이 유지되며 외부 결합에 먹히지 않는 후보입니다.</p>
 
       <div className="section-label">실제 스케일 정의</div>
       <label className="select-row">목표 입자 에너지

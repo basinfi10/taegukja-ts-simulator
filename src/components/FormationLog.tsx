@@ -18,6 +18,7 @@ function dominantLabel(it: ParticleInteraction): string {
 
 export function FormationLog({ snapshot }: { snapshot: SimulationSnapshot }) {
   const events = [...snapshot.formationEvents].reverse().slice(0, 12);
+  const transitions = [...snapshot.particleTransitions].reverse().slice(0, 10);
   const interactions = [...snapshot.particleInteractions]
     .sort((a, b) => (Math.abs(b.net) + Math.abs(b.weak)) - (Math.abs(a.net) + Math.abs(a.weak)))
     .slice(0, 8);
@@ -25,7 +26,7 @@ export function FormationLog({ snapshot }: { snapshot: SimulationSnapshot }) {
   return (
     <section className="panel formation-log">
       <div className="panel-title">입자 형성 로그 · 상호작용 해석</div>
-      <div className="log-columns">
+      <div className="log-columns three">
         <div>
           <h3>형성/붕괴 이벤트</h3>
           {events.length === 0 ? (
@@ -37,6 +38,22 @@ export function FormationLog({ snapshot }: { snapshot: SimulationSnapshot }) {
                   <b>t{e.tick}</b>
                   <span>{e.kind}</span>
                   <em>{e.label}</em>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div>
+          <h3>v8.6 안정 검증 이벤트</h3>
+          {transitions.length === 0 ? (
+            <p className="muted">아직 안정 검증 이벤트가 없습니다. 후보가 추적되면 birth/stable/decay/merge-risk가 기록됩니다.</p>
+          ) : (
+            <ul className="event-list">
+              {transitions.map((e) => (
+                <li key={e.id} className={`event-${e.kind}`}>
+                  <b>t{e.tick}</b>
+                  <span>{e.kind}</span>
+                  <em>{e.label} · score {fmt(e.score, 3)}</em>
                 </li>
               ))}
             </ul>

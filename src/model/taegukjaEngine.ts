@@ -15,6 +15,9 @@ import type {
   PulseGovernorMetrics,
   CoarseFieldCell,
   CoarseFieldMetrics,
+  StableVerifierMetrics,
+  ParticleHistoryRecord,
+  ParticleTransitionEvent,
   PerformanceMetrics,
   PhysicalScaleInfo,
   SimulationConfig,
@@ -90,6 +93,9 @@ export class TaegukjaEngine {
   private previousStableCount = 0;
   private previousParticleKeys = new Set<string>();
   private particleAges = new Map<string, number>();
+  private particleHistories = new Map<string, ParticleHistoryRecord>();
+  private particleTransitions: ParticleTransitionEvent[] = [];
+  private transitionSeq = 0;
   private lastMetrics: SimulationMetrics;
 
   constructor(config: SimulationConfig) {
@@ -129,6 +135,9 @@ export class TaegukjaEngine {
     this.previousStableCount = 0;
     this.previousParticleKeys.clear();
     this.particleAges.clear();
+    this.particleHistories.clear();
+    this.particleTransitions = [];
+    this.transitionSeq = 0;
     this.tick = 0;
     this.time = 0;
     this.createNodes();
@@ -158,7 +167,13 @@ export class TaegukjaEngine {
       cycleLoops: this.cycleLoops.map((l) => ({ ...l, nodeIds: [...l.nodeIds], edgeIds: [...l.edgeIds] })),
       priorityCandidates: this.priorityCandidates.map((c) => ({ ...c, breakdown: { ...c.breakdown } })),
       coarseField: this.coarseField.map((c) => ({ ...c })),
-      metrics: { ...this.lastMetrics, forceMetrics: { ...this.lastMetrics.forceMetrics }, forceDecomposition: { ...this.lastMetrics.forceDecomposition }, eventCycleMetrics: { ...this.lastMetrics.eventCycleMetrics }, pulseGovernorMetrics: { ...this.lastMetrics.pulseGovernorMetrics }, priorityMetrics: { ...this.lastMetrics.priorityMetrics }, coarseFieldMetrics: { ...this.lastMetrics.coarseFieldMetrics }, performanceMetrics: { ...this.lastMetrics.performanceMetrics }, scale: { ...this.lastMetrics.scale } }
+      particleHistories: [...this.particleHistories.values()].map((h) => ({
+        ...h,
+        continuityHistory: [...h.continuityHistory],
+        scoreHistory: [...h.scoreHistory]
+      })),
+      particleTransitions: this.particleTransitions.map((t) => ({ ...t })),
+      metrics: { ...this.lastMetrics, forceMetrics: { ...this.lastMetrics.forceMetrics }, forceDecomposition: { ...this.lastMetrics.forceDecomposition }, eventCycleMetrics: { ...this.lastMetrics.eventCycleMetrics }, pulseGovernorMetrics: { ...this.lastMetrics.pulseGovernorMetrics }, priorityMetrics: { ...this.lastMetrics.priorityMetrics }, coarseFieldMetrics: { ...this.lastMetrics.coarseFieldMetrics }, performanceMetrics: { ...this.lastMetrics.performanceMetrics }, stableVerifierMetrics: { ...this.lastMetrics.stableVerifierMetrics }, scale: { ...this.lastMetrics.scale } }
     };
   }
 
@@ -1388,6 +1403,7 @@ export class TaegukjaEngine {
     );
 
     const tracked = particles.slice(0, 80);
+    this.updateStableVerifier(tracked);
     const stableCount = tracked.filter((p) => p.lifecycle === 'stable' || p.lifecycle === 'complete').length;
 
     const newParticles = tracked.filter((p) => !this.previousParticleKeys.has(this.particleStableKey(p)));
@@ -1419,6 +1435,212 @@ export class TaegukjaEngine {
     this.particles = tracked;
   }
 
+
+
+  private updateStableVerifier(particles: ParticleInfo[]): void {
+    if (!this.config.enableStableVerifier) {
+      for (const p of particles) {
+        p.verifierKey = this.particleStableKey(p);
+        p.survivalTicks = p.stabilityAge;
+        p.stableVerifierScore = p.formationStage;
+        p.internalBondRatio = 0;
+        p.externalBondRatio = 0;
+        p.continuityTrend = p.cycleContinuity;
+        p.mergeRisk = 0;
+        p.decayRisk = 0;
+        p.verifierStatus = p.lifecycle === 'stable' || p.lifecycle === 'complete' ? 'verified-stable' : 'forming';
+      }
+      return;
+    }
+
+    const used = new Set<string>();
+    const currentKeys = new Set<string>();
+    const scale = this.physicalScale();
+    const crossingProgress = scale.crossingProgressFraction;
+    const window = Math.max(12, Math.round(this.config.stableVerifierWindow));
+    const transitionParticles: ParticleInfo[] = [];
+
+    for (const p of particles) {
+      const { internalBondRatio, externalBondRatio } = this.computeParticleBondRatios(p);
+      const matchKey = this.matchParticleHistory(p, used);
+      used.add(matchKey);
+      currentKeys.add(matchKey);
+
+      const prev = this.particleHistories.get(matchKey);
+      const survivalTicks = prev ? prev.survivalTicks + 1 : 1;
+      const continuityHistory = [...(prev?.continuityHistory ?? []), p.cycleContinuity].slice(-window);
+      const avgCycleContinuity = continuityHistory.reduce((s, v) => s + v, 0) / Math.max(1, continuityHistory.length);
+      const avgInternalBondRatio = prev
+        ? (prev.avgInternalBondRatio * Math.min(prev.survivalTicks, window) + internalBondRatio) / (Math.min(prev.survivalTicks, window) + 1)
+        : internalBondRatio;
+      const avgExternalBondRatio = prev
+        ? (prev.avgExternalBondRatio * Math.min(prev.survivalTicks, window) + externalBondRatio) / (Math.min(prev.survivalTicks, window) + 1)
+        : externalBondRatio;
+
+      const survivalScore = clamp01(survivalTicks / Math.max(1, this.config.stableMinSurvivalTicks));
+      const crossingScore = clamp01(crossingProgress / Math.max(1e-9, this.config.stableMinCrossingProgress));
+      const internalScore = clamp01(internalBondRatio / Math.max(1e-9, this.config.stableMinInternalBondRatio));
+      const externalPenalty = clamp01(externalBondRatio / Math.max(1e-9, this.config.stableMaxExternalBondRatio));
+      const continuityScore = clamp01(avgCycleContinuity / Math.max(1e-9, this.config.stableMinCycleContinuity));
+      const verifierScore = clamp01(
+        0.18 * p.formationStage +
+        0.17 * p.solitonScore +
+        0.16 * p.cycleDensity +
+        0.16 * continuityScore +
+        0.13 * internalScore +
+        0.12 * survivalScore +
+        0.08 * crossingScore -
+        0.10 * externalPenalty
+      );
+
+      const mergeRisk = clamp01((externalBondRatio - this.config.stableMaxExternalBondRatio * 0.72) / Math.max(0.01, this.config.stableMaxExternalBondRatio * 0.65));
+      const decayRisk = clamp01(1 - verifierScore + Math.max(0, this.config.stableMinCycleContinuity - avgCycleContinuity) * 0.65);
+      const verified =
+        p.completeParticle &&
+        survivalTicks >= this.config.stableMinSurvivalTicks &&
+        crossingProgress >= this.config.stableMinCrossingProgress &&
+        avgCycleContinuity >= this.config.stableMinCycleContinuity &&
+        internalBondRatio >= this.config.stableMinInternalBondRatio &&
+        externalBondRatio <= this.config.stableMaxExternalBondRatio &&
+        verifierScore >= this.config.stableVerifierScoreThreshold;
+
+      let status: ParticleHistoryRecord['status'] = 'forming';
+      if (verified) status = 'verified-stable';
+      else if (mergeRisk > 0.68) status = 'merge-risk';
+      else if (decayRisk > 0.76) status = 'decay-risk';
+      else if (survivalTicks >= this.config.stableMinSurvivalTicks * 0.55 && verifierScore >= this.config.stableVerifierScoreThreshold * 0.72) status = 'long-lived';
+      else if (!prev) status = 'new';
+
+      p.verifierKey = matchKey;
+      p.survivalTicks = survivalTicks;
+      p.stableVerifierScore = verifierScore;
+      p.internalBondRatio = internalBondRatio;
+      p.externalBondRatio = externalBondRatio;
+      p.continuityTrend = avgCycleContinuity;
+      p.mergeRisk = mergeRisk;
+      p.decayRisk = decayRisk;
+      p.verifierStatus = status as ParticleInfo['verifierStatus'];
+      p.stabilityAge = survivalTicks;
+
+      if (verified) {
+        p.lifecycle = p.completeParticle ? 'complete' : 'stable';
+        p.formationStage = Math.max(p.formationStage, verifierScore);
+      } else if (status === 'long-lived') {
+        p.lifecycle = 'forming';
+        p.formationStage = Math.max(p.formationStage, verifierScore * 0.92);
+      }
+
+      const scoreHistory = [...(prev?.scoreHistory ?? []), verifierScore].slice(-window);
+      const avgVerifierScore = scoreHistory.reduce((s, v) => s + v, 0) / Math.max(1, scoreHistory.length);
+      const record: ParticleHistoryRecord = {
+        key: matchKey,
+        firstTick: prev?.firstTick ?? this.tick,
+        lastSeenTick: this.tick,
+        survivalTicks,
+        lastCx: p.cx,
+        lastCy: p.cy,
+        lastSize: p.size,
+        bestScore: Math.max(prev?.bestScore ?? 0, verifierScore),
+        avgVerifierScore,
+        avgCycleContinuity,
+        avgInternalBondRatio,
+        avgExternalBondRatio,
+        continuityHistory,
+        scoreHistory,
+        status
+      };
+      this.particleHistories.set(matchKey, record);
+
+      if (!prev) this.pushParticleTransition('birth', matchKey, p, `새 후보 추적 시작 · ${p.size}셀`, verifierScore);
+      if (verified && prev?.status !== 'verified-stable') this.pushParticleTransition('stable', matchKey, p, `검증 안정 입자 · 생존 ${survivalTicks}틱`, verifierScore);
+      if (status === 'merge-risk' && prev?.status !== 'merge-risk') this.pushParticleTransition('merge-risk', matchKey, p, `외부 결합 과다 · merge risk ${(mergeRisk * 100).toFixed(0)}%`, verifierScore);
+      if (survivalTicks > 0 && survivalTicks % Math.max(60, this.config.stableVerifierWindow) === 0 && verifierScore >= this.config.stableVerifierScoreThreshold * 0.75) transitionParticles.push(p);
+    }
+
+    // Decay detection: histories not seen for a grace period are marked decayed.
+    for (const [key, hist] of [...this.particleHistories.entries()]) {
+      if (currentKeys.has(key)) continue;
+      if (this.tick - hist.lastSeenTick > this.config.verifierDecayGrace && hist.status !== 'decayed') {
+        hist.status = 'decayed';
+        this.particleHistories.set(key, hist);
+        this.particleTransitions.push({
+          id: this.transitionSeq++,
+          tick: this.tick,
+          kind: 'decay',
+          key,
+          x: hist.lastCx,
+          y: hist.lastCy,
+          label: `후보 소멸 · 생존 ${hist.survivalTicks}틱`,
+          score: hist.avgVerifierScore
+        });
+      }
+    }
+
+    for (const p of transitionParticles.slice(0, 2)) {
+      if (p.verifierKey) this.pushParticleTransition('survive', p.verifierKey, p, `장기 후보 지속 · 생존 ${p.survivalTicks}틱`, p.stableVerifierScore ?? p.formationStage);
+    }
+
+    this.particleTransitions = this.particleTransitions.filter((e) => this.tick - e.tick < 900).slice(-160);
+    // Keep old histories bounded.
+    const activeOrRecent = [...this.particleHistories.entries()].filter(([, h]) => h.status !== 'decayed' || this.tick - h.lastSeenTick < this.config.verifierDecayGrace * 4);
+    if (activeOrRecent.length !== this.particleHistories.size) this.particleHistories = new Map(activeOrRecent.slice(-240));
+  }
+
+  private matchParticleHistory(p: ParticleInfo, used: Set<string>): string {
+    const base = this.particleStableKey(p);
+    const existing = this.particleHistories.get(base);
+    if (existing && !used.has(base)) return base;
+
+    let bestKey = base;
+    let bestScore = Infinity;
+    const mergeDistance = Math.max(24, this.config.verifierMergeDistance);
+    for (const [key, h] of this.particleHistories.entries()) {
+      if (used.has(key) || h.status === 'decayed') continue;
+      const d = distance2D(p.cx, p.cy, h.lastCx, h.lastCy);
+      const sizeRatio = p.size / Math.max(1, h.lastSize);
+      if (d > mergeDistance || sizeRatio < 0.38 || sizeRatio > 2.65) continue;
+      const score = d / mergeDistance + Math.abs(Math.log(sizeRatio)) * 0.75 + Math.min(1, (this.tick - h.lastSeenTick) / Math.max(1, this.config.verifierDecayGrace));
+      if (score < bestScore) {
+        bestScore = score;
+        bestKey = key;
+      }
+    }
+    return bestKey;
+  }
+
+  private computeParticleBondRatios(p: ParticleInfo): { internalBondRatio: number; externalBondRatio: number } {
+    const set = new Set(p.nodeIds);
+    let internalStrength = 0;
+    let externalStrength = 0;
+    for (const e of this.edges) {
+      const a = set.has(e.a);
+      const b = set.has(e.b);
+      const strength = e.binding * 0.45 + e.eventContinuity * 0.25 + e.circulationScore * 0.25 + e.weight * 0.05;
+      if (a && b) internalStrength += strength;
+      else if (a || b) externalStrength += strength;
+    }
+    const total = internalStrength + externalStrength;
+    if (total <= 1e-9) return { internalBondRatio: 0, externalBondRatio: 1 };
+    return {
+      internalBondRatio: clamp01(internalStrength / total),
+      externalBondRatio: clamp01(externalStrength / total)
+    };
+  }
+
+  private pushParticleTransition(kind: ParticleTransitionEvent['kind'], key: string, p: ParticleInfo, label: string, score: number): void {
+    this.particleTransitions.push({
+      id: this.transitionSeq++,
+      tick: this.tick,
+      kind,
+      key,
+      particleId: p.id,
+      x: p.cx,
+      y: p.cy,
+      label,
+      score: clamp01(score)
+    });
+    this.particleTransitions = this.particleTransitions.slice(-160);
+  }
 
   private splitLargeParticleComponents(ids: number[]): number[][] {
     if (!this.config.splitLargeParticleComponents) return [ids];
@@ -1652,6 +1874,7 @@ export class TaegukjaEngine {
       priorityMetrics: this.computePriorityMetrics(),
       coarseFieldMetrics,
       performanceMetrics: this.computePerformanceMetrics(),
+      stableVerifierMetrics: this.computeStableVerifierMetrics(),
       spatialSpreadRatio: spatial.spreadRatio,
       fieldOccupancyRatio: spatial.occupancyRatio,
       meanNearestNeighborDistance: spatial.meanNearestDistance,
@@ -1678,6 +1901,7 @@ export class TaegukjaEngine {
       priorityMetrics: this.emptyPriorityMetrics(),
       coarseFieldMetrics: this.emptyCoarseFieldMetrics(),
       performanceMetrics: this.computePerformanceMetrics(),
+      stableVerifierMetrics: this.computeStableVerifierMetrics(),
       spatialSpreadRatio: 1,
       fieldOccupancyRatio: 0,
       meanNearestNeighborDistance: 0,
@@ -1835,6 +2059,39 @@ export class TaegukjaEngine {
 
 
 
+
+  private computeStableVerifierMetrics(): StableVerifierMetrics {
+    const histories = [...this.particleHistories.values()];
+    const alive = histories.filter((h) => h.status !== 'decayed');
+    const count = Math.max(1, alive.length);
+    const verifiedStableCount = alive.filter((h) => h.status === 'verified-stable').length;
+    const longLivedCandidateCount = alive.filter((h) => h.status === 'long-lived' || h.status === 'verified-stable').length;
+    const mergeRiskCount = alive.filter((h) => h.status === 'merge-risk').length;
+    const decayRiskCount = alive.filter((h) => h.status === 'decay-risk').length;
+    const decayedHistoryCount = histories.filter((h) => h.status === 'decayed').length;
+    const avgSurvivalTicks = alive.reduce((s, h) => s + h.survivalTicks, 0) / count;
+    const maxSurvivalTicks = alive.reduce((m, h) => Math.max(m, h.survivalTicks), 0);
+    const avgVerifierScore = alive.reduce((s, h) => s + h.avgVerifierScore, 0) / count;
+    const avgInternalBondRatio = alive.reduce((s, h) => s + h.avgInternalBondRatio, 0) / count;
+    const avgExternalBondRatio = alive.reduce((s, h) => s + h.avgExternalBondRatio, 0) / count;
+    return {
+      trackedParticleCount: alive.length,
+      verifiedStableCount,
+      longLivedCandidateCount,
+      mergeRiskCount,
+      decayRiskCount,
+      decayedHistoryCount,
+      avgSurvivalTicks,
+      maxSurvivalTicks,
+      avgVerifierScore,
+      avgInternalBondRatio,
+      avgExternalBondRatio,
+      stableMinSurvivalTicks: this.config.stableMinSurvivalTicks,
+      stableMinCrossingProgress: this.config.stableMinCrossingProgress,
+      currentCrossingProgress: this.physicalScale().crossingProgressFraction
+    };
+  }
+
   private computePerformanceMetrics(): PerformanceMetrics {
     return {
       snapshotFps: this.config.renderSnapshotFps,
@@ -1857,7 +2114,17 @@ export class TaegukjaEngine {
       targetEventActivity: this.config.targetEventActivity,
       eventSaturationDamping: this.config.eventSaturationDamping,
       maxParticleComponentFactor: this.config.maxParticleComponentFactor,
-      splitLargeParticleComponents: this.config.splitLargeParticleComponents
+      splitLargeParticleComponents: this.config.splitLargeParticleComponents,
+      enableStableVerifier: this.config.enableStableVerifier,
+      stableVerifierWindow: this.config.stableVerifierWindow,
+      stableMinSurvivalTicks: this.config.stableMinSurvivalTicks,
+      stableMinCrossingProgress: this.config.stableMinCrossingProgress,
+      stableMinCycleContinuity: this.config.stableMinCycleContinuity,
+      stableMinInternalBondRatio: this.config.stableMinInternalBondRatio,
+      stableMaxExternalBondRatio: this.config.stableMaxExternalBondRatio,
+      stableVerifierScoreThreshold: this.config.stableVerifierScoreThreshold,
+      verifierMergeDistance: this.config.verifierMergeDistance,
+      verifierDecayGrace: this.config.verifierDecayGrace
     };
   }
 

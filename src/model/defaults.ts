@@ -124,5 +124,16 @@ export const defaultConfig: SimulationConfig = {
   targetEventActivity: 0.72,
   eventSaturationDamping: 0.38,
   maxParticleComponentFactor: 1.8,
-  splitLargeParticleComponents: true
+  splitLargeParticleComponents: true,
+
+  enableStableVerifier: true,
+  stableVerifierWindow: 90,
+  stableMinSurvivalTicks: 120,
+  stableMinCrossingProgress: 0.25,
+  stableMinCycleContinuity: 0.72,
+  stableMinInternalBondRatio: 0.54,
+  stableMaxExternalBondRatio: 0.46,
+  stableVerifierScoreThreshold: 0.68,
+  verifierMergeDistance: 74,
+  verifierDecayGrace: 80
 };

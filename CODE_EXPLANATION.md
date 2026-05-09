@@ -436,3 +436,17 @@ cycleBondThreshold: 0.36
   - continuityGain 0.18 → 0.085
   - cycleBondThreshold 0.36 → 0.44
   - targetPulseDensity 0.055 → 0.038
+
+
+## v8.6 코드 변경 요약
+
+- `ParticleInfo`에 verifier fields 추가
+- `ParticleHistoryRecord`, `ParticleTransitionEvent`, `StableVerifierMetrics` 추가
+- `TaegukjaEngine.updateStableVerifier()` 추가
+- `matchParticleHistory()`로 위치/크기 기반 후보 연속 추적
+- `computeParticleBondRatios()`로 내부/외부 결합 분리
+- stable 판정에 survival/crossing/cycle/internal/external 조건 추가
+- MetricsPanel에 안정 입자 검증 카드 추가
+- Controls에 stable verifier 설정 추가
+- FormationLog에 안정 검증 이벤트 열 추가
+- JSON export에 particleHistories, particleTransitions, stableVerifierMetrics 추가

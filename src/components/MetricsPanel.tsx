@@ -22,9 +22,10 @@ export function MetricsPanel({ snapshot }: { snapshot: SimulationSnapshot }) {
   const g = m.pulseGovernorMetrics;
   const cf = m.coarseFieldMetrics;
   const pm = m.performanceMetrics;
+  const sv = m.stableVerifierMetrics;
   return (
     <aside className="panel metrics">
-      <div className="panel-title">관측값 · v8.5.9 포화 방지/coarse 사건장</div>
+      <div className="panel-title">관측값 · v8.6 안정 입자 검증/coarse 사건장</div>
       <div className="scale-card">
         <b>소립자 1개 목표 스케일</b>
         <code>N_real = (r / ℓ_TQ)³</code>
@@ -67,6 +68,8 @@ export function MetricsPanel({ snapshot }: { snapshot: SimulationSnapshot }) {
         <div><span>전역 보정량</span><b>{fmtSci(m.globalEnergyCorrection)}</b></div>
         <div><span>입자 후보</span><b>{m.particleCount}</b></div>
         <div><span>형성/안정</span><b>{m.formingParticleCount} / {m.stableParticleCount}</b></div>
+        <div><span>검증 stable</span><b>{sv.verifiedStableCount}</b></div>
+        <div><span>장기 후보</span><b>{sv.longLivedCandidateCount}</b></div>
         <div><span>완성 입자</span><b>{m.completeParticleCount}</b></div>
         <div><span>최대 완성률</span><b>{(m.largestParticleScaleFraction * 100).toFixed(1)}%</b></div>
         <div><span>질량 총합</span><b>{fmtSci(m.totalMassKg)} kg</b></div>
@@ -92,6 +95,24 @@ export function MetricsPanel({ snapshot }: { snapshot: SimulationSnapshot }) {
       <Bar label="초기장 분산도" value={m.spatialSpreadRatio} />
       <Bar label="화면 격자 점유율" value={m.fieldOccupancyRatio} />
       <Bar label="뭉침 지수" value={m.cohesionIndex} />
+      <div className="force-decomp-card stable-verifier-card">
+        <b>v8.6 안정 입자 검증기</b>
+        <small>후보가 일시적으로 생겼는지가 아니라, 일정 crossing 진행률 동안 내부 순환을 유지하며 외부 결합에 먹히지 않는지 추적합니다.</small>
+        <Bar label="검증 안정 수" value={sv.verifiedStableCount} max={Math.max(1, m.particleCount)} />
+        <Bar label="장기 후보 수" value={sv.longLivedCandidateCount} max={Math.max(1, m.particleCount)} />
+        <Bar label="평균 verifier score" value={sv.avgVerifierScore} />
+        <Bar label="평균 내부 결합" value={sv.avgInternalBondRatio} />
+        <Bar label="평균 외부 결합" value={sv.avgExternalBondRatio} />
+        <Bar label="crossing 진행률" value={sv.currentCrossingProgress} max={Math.max(1, sv.stableMinCrossingProgress)} />
+        <div className="decomp-summary">
+          <span>tracked <b>{sv.trackedParticleCount}</b></span>
+          <span>max survival <b>{sv.maxSurvivalTicks}</b></span>
+          <span>merge/decay <b>{sv.mergeRiskCount}/{sv.decayRiskCount}</b></span>
+        </div>
+        <code>stable = survival + cycle continuity + internal bond + low external bond + crossing progress</code>
+        <code>기준: {sv.stableMinSurvivalTicks} ticks · crossing {(sv.stableMinCrossingProgress * 100).toFixed(0)}%</code>
+      </div>
+
       <div className="force-decomp-card performance-card">
         <b>v8.5.4 PC 성능 병목 점검</b>
         <small>전체 step은 계속 돌리되, React snapshot 복사·Canvas edge 렌더링·무거운 통계 계산을 제한합니다.</small>

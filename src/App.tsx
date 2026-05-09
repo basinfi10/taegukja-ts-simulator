@@ -137,9 +137,9 @@ export default function App() {
 
   const exportCurrentState = useCallback(() => {
     const snap = engineRef.current.getSnapshot();
-    downloadJson(`taegukja-v859-state-${Date.now()}.json`, {
+    downloadJson(`taegukja-v86-state-${Date.now()}.json`, {
       schema: 'taegukja-simulator-state',
-      version: '8.5.9',
+      version: '8.6.0',
       exportedAt: new Date().toISOString(),
       config,
       snapshot: snap,
@@ -156,16 +156,19 @@ export default function App() {
         cycleBondCount: snap.metrics.eventCycleMetrics.cycleBondCount,
         activePulseCount: snap.metrics.eventCycleMetrics.activePulseCount,
         activeCellRatio: snap.metrics.coarseFieldMetrics.activeCellRatio,
-        crossingProgressFraction: snap.metrics.scale.crossingProgressFraction
+        crossingProgressFraction: snap.metrics.scale.crossingProgressFraction,
+        verifiedStableCount: snap.metrics.stableVerifierMetrics.verifiedStableCount,
+        longLivedCandidateCount: snap.metrics.stableVerifierMetrics.longLivedCandidateCount,
+        avgVerifierScore: snap.metrics.stableVerifierMetrics.avgVerifierScore
       }
     });
   }, [config, downloadJson, running]);
 
   const exportCompactReport = useCallback(() => {
     const snap = engineRef.current.getSnapshot();
-    downloadJson(`taegukja-v859-report-${Date.now()}.json`, {
+    downloadJson(`taegukja-v86-report-${Date.now()}.json`, {
       schema: 'taegukja-simulator-report',
-      version: '8.5.9',
+      version: '8.6.0',
       exportedAt: new Date().toISOString(),
       config,
       metrics: snap.metrics,
@@ -173,6 +176,9 @@ export default function App() {
       formationEvents: snap.formationEvents.slice(-80),
       priorityCandidates: snap.priorityCandidates.slice(0, 80),
       cycleLoops: snap.cycleLoops.slice(0, 120),
+      particleHistories: snap.particleHistories,
+      particleTransitions: snap.particleTransitions,
+      stableVerifierMetrics: snap.metrics.stableVerifierMetrics,
       coarseField: snap.coarseField
     });
   }, [config, downloadJson]);
@@ -187,10 +193,10 @@ export default function App() {
     <div className="app-shell">
       <header className="hero">
         <div>
-          <p className="eyebrow">Taegeukja Cosmology Simulator v8.5.9</p>
-          <h1>태극자 1000~3000 균일 분산장 · 포화 방지 · 지역 입자 분리 시뮬레이터</h1>
+          <p className="eyebrow">Taegeukja Cosmology Simulator v8.6</p>
+          <h1>태극자 1000~3000 균일 분산장 · 안정 입자 검증 시뮬레이터</h1>
           <p>
-            화면 노드 1개를 실제 태극자 다수의 대표 셀로 해석합니다. v8.5.1은 대표 로드 100개를 소립자 1개 스케일로 재정립해 다수 입자 상호작용을 보며, 태극자 1 변화 = 1 플랑크 틱이라는 시간 정의를 시뮬레이터에 연결합니다. 브라우저가 실제 처리하는 SPS를 측정해 timeCompressionFactor를 자동 보정하고, v8.5.9는 분석 데이터에서 확인된 eventActivity/continuity 포화와 단일 거대 입자 후보 문제를 줄이기 위해 포화 감쇠와 지역 입자 분리를 추가합니다.
+            화면 노드 1개를 실제 태극자 다수의 대표 셀로 해석합니다. v8.5.1은 대표 로드 100개를 소립자 1개 스케일로 재정립해 다수 입자 상호작용을 보며, 태극자 1 변화 = 1 플랑크 틱이라는 시간 정의를 시뮬레이터에 연결합니다. 브라우저가 실제 처리하는 SPS를 측정해 timeCompressionFactor를 자동 보정하고, v8.6은 입자 후보가 실제로 살아남는지 검증하기 위해 생존 시간, 내부/외부 결합, cycle continuity history, merge/decay event를 추적합니다.
           </p>
         </div>
         <div className="hero-card">

@@ -394,3 +394,13 @@ h1 { margin: 0; font-size: 30px; line-height: 1.2; letter-spacing: -.03em; }
   background: rgba(255, 190, 95, 0.10);
   border-color: rgba(255, 190, 95, 0.28);
 }
+
+
+.log-columns.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 1100px) {
+  .log-columns.three {
+    grid-template-columns: 1fr;
+  }
+}

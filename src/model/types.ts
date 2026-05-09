@@ -165,6 +165,18 @@ export interface SimulationConfig {
   eventSaturationDamping: number;
   maxParticleComponentFactor: number;
   splitLargeParticleComponents: boolean;
+
+  /** v8.6 stable particle verifier */
+  enableStableVerifier: boolean;
+  stableVerifierWindow: number;
+  stableMinSurvivalTicks: number;
+  stableMinCrossingProgress: number;
+  stableMinCycleContinuity: number;
+  stableMinInternalBondRatio: number;
+  stableMaxExternalBondRatio: number;
+  stableVerifierScoreThreshold: number;
+  verifierMergeDistance: number;
+  verifierDecayGrace: number;
 }
 
 
@@ -361,6 +373,47 @@ export interface ParticleInfo {
   cycleDensity: number;
   cycleContinuity: number;
   loopClosureScore: number;
+
+  /** v8.6: long-lived stable verifier values */
+  verifierKey?: string;
+  survivalTicks?: number;
+  stableVerifierScore?: number;
+  internalBondRatio?: number;
+  externalBondRatio?: number;
+  continuityTrend?: number;
+  mergeRisk?: number;
+  decayRisk?: number;
+  verifierStatus?: 'new' | 'forming' | 'long-lived' | 'verified-stable' | 'merge-risk' | 'decay-risk';
+}
+
+export interface ParticleHistoryRecord {
+  key: string;
+  firstTick: number;
+  lastSeenTick: number;
+  survivalTicks: number;
+  lastCx: number;
+  lastCy: number;
+  lastSize: number;
+  bestScore: number;
+  avgVerifierScore: number;
+  avgCycleContinuity: number;
+  avgInternalBondRatio: number;
+  avgExternalBondRatio: number;
+  continuityHistory: number[];
+  scoreHistory: number[];
+  status: 'new' | 'forming' | 'long-lived' | 'verified-stable' | 'merge-risk' | 'decay-risk' | 'decayed';
+}
+
+export interface ParticleTransitionEvent {
+  id: number;
+  tick: number;
+  kind: 'birth' | 'stable' | 'decay' | 'merge-risk' | 'split' | 'survive';
+  key: string;
+  particleId?: number;
+  x: number;
+  y: number;
+  label: string;
+  score: number;
 }
 
 export interface FormationEvent {
@@ -538,6 +591,35 @@ export interface PerformanceMetrics {
   eventSaturationDamping: number;
   maxParticleComponentFactor: number;
   splitLargeParticleComponents: boolean;
+
+  /** v8.6 stable particle verifier */
+  enableStableVerifier: boolean;
+  stableVerifierWindow: number;
+  stableMinSurvivalTicks: number;
+  stableMinCrossingProgress: number;
+  stableMinCycleContinuity: number;
+  stableMinInternalBondRatio: number;
+  stableMaxExternalBondRatio: number;
+  stableVerifierScoreThreshold: number;
+  verifierMergeDistance: number;
+  verifierDecayGrace: number;
+}
+
+export interface StableVerifierMetrics {
+  trackedParticleCount: number;
+  verifiedStableCount: number;
+  longLivedCandidateCount: number;
+  mergeRiskCount: number;
+  decayRiskCount: number;
+  decayedHistoryCount: number;
+  avgSurvivalTicks: number;
+  maxSurvivalTicks: number;
+  avgVerifierScore: number;
+  avgInternalBondRatio: number;
+  avgExternalBondRatio: number;
+  stableMinSurvivalTicks: number;
+  stableMinCrossingProgress: number;
+  currentCrossingProgress: number;
 }
 
 export interface SimulationMetrics {
@@ -584,6 +666,7 @@ export interface SimulationMetrics {
   priorityMetrics: PriorityMetrics;
   coarseFieldMetrics: CoarseFieldMetrics;
   performanceMetrics: PerformanceMetrics;
+  stableVerifierMetrics: StableVerifierMetrics;
   /** 화면 전체에 태극자가 얼마나 퍼져 있는지. 1에 가까우면 넓게 분산, 낮아지면 중앙/국소 뭉침. */
   spatialSpreadRatio: number;
   /** 화면 격자 점유율. 초기 균일 로드라면 높고, 뭉침이 진행되면 낮아집니다. */
@@ -605,6 +688,8 @@ export interface SimulationSnapshot {
   cycleLoops: CycleLoopInfo[];
   priorityCandidates: PriorityCandidate[];
   coarseField: CoarseFieldCell[];
+  particleHistories: ParticleHistoryRecord[];
+  particleTransitions: ParticleTransitionEvent[];
   metrics: SimulationMetrics;
 }
 

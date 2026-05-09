@@ -1,7 +1,7 @@
 {
-  "name": "taegukja-ts-simulator-v8-5-9-anti-saturation",
+  "name": "taegukja-ts-simulator-v8-6-stable-verifier",
   "private": true,
-  "version": "8.5.9",
+  "version": "8.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
